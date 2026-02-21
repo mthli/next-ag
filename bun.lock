@@ -6,6 +6,7 @@
       "name": "next-ag",
       "dependencies": {
         "ai": "^6.0.97",
+        "zod": "^4.3.6",
       },
       "devDependencies": {
         "@eslint/js": "^10.0.1",
