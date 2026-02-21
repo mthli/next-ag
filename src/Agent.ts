@@ -24,15 +24,39 @@ class Agent {
 
   constructor({ model, providerOptions, systemPrompt, tools }: AgentProps) {
     this.model = model;
-    this.providerOptions = { ...(providerOptions ?? {}) };
+    this.providerOptions = { ...(providerOptions ?? {}) }; // copy.
     this.systemPrompt = systemPrompt ?? "";
-    this.tools = [...(tools ?? [])];
+    this.tools = [...(tools ?? [])]; // copy.
   }
 
   public updateProps(props: Partial<AgentProps>) {
-    log(TAG, `updateProps, props=${JSON.stringify(props)}`);
-    this.pendingProps = { ...props };
-    // TODO (matthew)
+    if (this.isRunning) {
+      log(TAG, `updateProps, pending, props=${JSON.stringify(props)}`);
+      this.pendingProps = { ...props };
+      return;
+    }
+
+    if (props.model) {
+      log(TAG, `updateProps, model=${props.model}`);
+      this.model = props.model;
+    }
+
+    if (props.providerOptions) {
+      log(TAG, `updateProps, providerOptions=${props.providerOptions}`);
+      this.providerOptions = { ...props.providerOptions }; // copy.
+    }
+
+    if (props.systemPrompt) {
+      log(TAG, `updateProps, systemPrompt=${props.systemPrompt}`);
+      this.systemPrompt = props.systemPrompt;
+    }
+
+    if (props.tools) {
+      log(TAG, `updateProps, tools=${props.tools}`);
+      this.tools = [...props.tools]; // copy.
+    }
+
+    this.pendingProps = undefined; // clear.
   }
 
   public start(prompt: string) {
