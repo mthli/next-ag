@@ -1,9 +1,32 @@
-import type { LanguageModel, JSONValue } from "ai";
+import type {
+  LanguageModel,
+  JSONValue,
+  UserModelMessage,
+  AssistantModelMessage,
+  ToolModelMessage,
+} from "ai";
 import { z } from "zod";
 
 // Copy from ai sdk since it doesn't export these types but we need them.
 export type JSONObject = { [key: string]: JSONValue | undefined };
 export type JSONArray = JSONValue[];
+
+export type AgentMessage =
+  | UserModelMessage
+  | AssistantModelMessage
+  | ToolModelMessage;
+
+// You can either use `prompt` or `messages` but not both.
+// prettier-ignore
+export type AgentPrompt =
+  | {
+    prompt: string | Array<AgentMessage>;
+    messages?: never;
+  }
+  | {
+    messages: Array<AgentMessage>;
+    prompt?: never;
+  };
 
 export interface AgentProps {
   model: LanguageModel;

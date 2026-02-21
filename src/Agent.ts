@@ -3,6 +3,7 @@ import { streamText, type LanguageModel } from "ai";
 import {
   AgentEvent,
   type AgentEventListener,
+  type AgentPrompt,
   type AgentProps,
   type AgentTool,
   type JSONObject,
@@ -59,13 +60,13 @@ class Agent {
     this.pendingProps = undefined; // clear.
   }
 
-  public start(prompt: string) {
-    log(TAG, `start, prompt=${prompt}`);
+  public start(prompt: AgentPrompt) {
+    log(TAG, `start, prompt=${JSON.stringify(prompt)}`);
     // TODO (matthew)
   }
 
-  public steer(prompt: string) {
-    log(TAG, `steer, prompt=${prompt}`);
+  public steer(prompt: AgentPrompt) {
+    log(TAG, `steer, prompt=${JSON.stringify(prompt)}`);
     // TODO (matthew)
   }
 
