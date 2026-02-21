@@ -29,7 +29,7 @@ class Agent {
 
   private abortController = new AbortController();
   private listeners = new Set<AgentEventListener>();
-  private isRunning = false;
+  private _isRunning = false;
 
   constructor({ id, name, model, providerOptions, systemPrompt, tools, debug }: AgentProps) {
     this.id = id ?? nanoid(10);
@@ -42,7 +42,7 @@ class Agent {
   }
 
   public updateProps(props: Omit<AgentProps, "id" | "name">): boolean {
-    if (this.isRunning) {
+    if (this.isRunning()) {
       this.log(LogLevel.WARN, `updateProps, skipped because agent is running`);
       return false;
     }
@@ -76,7 +76,7 @@ class Agent {
   public start(prompt: AgentPrompt): boolean {
     this.log(LogLevel.INFO, `start, prompt=${JSON.stringify(prompt)}`);
 
-    if (this.isRunning) {
+    if (this.isRunning()) {
       this.log(LogLevel.WARN, `start, skipped because agent is running`);
       return false;
     }
@@ -88,7 +88,7 @@ class Agent {
   public steer(prompt: AgentPrompt): boolean {
     this.log(LogLevel.INFO, `steer, prompt=${JSON.stringify(prompt)}`);
 
-    if (!this.isRunning) {
+    if (!this.isRunning()) {
       this.log(LogLevel.WARN, `steer, skipped because agent is not running`);
       return false;
     }
@@ -106,6 +106,10 @@ class Agent {
   public subscribe(l: AgentEventListener): () => void {
     this.listeners.add(l);
     return () => this.listeners.delete(l);
+  }
+
+  public isRunning(): boolean {
+    return this._isRunning;
   }
 
   public waitForIdle(): Promise<void> {
