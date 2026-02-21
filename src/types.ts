@@ -1,4 +1,16 @@
+import type { LanguageModel, JSONValue } from "ai";
 import { z } from "zod";
+
+// Copy from ai sdk since it doesn't export these types but we need them.
+export type JSONObject = { [key: string]: JSONValue | undefined };
+export type JSONArray = JSONValue[];
+
+export interface AgentProps {
+  model: LanguageModel;
+  providerOptions?: Record<string, JSONObject>;
+  systemPrompt?: string;
+  tools?: AgentTool[];
+}
 
 export interface AgentTool<
   I extends z.ZodTypeAny | undefined = undefined,
@@ -14,6 +26,7 @@ export interface AgentTool<
   ) => Promise<O extends z.ZodTypeAny ? z.infer<O> : unknown>;
 }
 
+export type AgentEventListener = (e: AgentEvent) => void;
 export enum AgentEvent {
   // Agent lifecycle.
   AGENT_START = "agent_start",
