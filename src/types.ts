@@ -11,10 +11,7 @@ import { z } from "zod";
 export type JSONObject = { [key: string]: JSONValue | undefined };
 export type JSONArray = JSONValue[];
 
-export type AgentMessage =
-  | UserModelMessage
-  | AssistantModelMessage
-  | ToolModelMessage;
+export type AgentMessage = UserModelMessage | AssistantModelMessage | ToolModelMessage;
 
 // You can either use `prompt` or `messages` but not both.
 // prettier-ignore

@@ -10,6 +10,14 @@ import {
   type JSONObject,
 } from "./types";
 
+enum LogLevel {
+  TRACE = "trace",
+  DEBUG = "debug",
+  INFO = "info",
+  WARN = "warn",
+  ERROR = "error",
+}
+
 class Agent {
   private id: string;
   private name: string;
@@ -21,18 +29,9 @@ class Agent {
 
   private abortController = new AbortController();
   private listeners = new Set<AgentEventListener>();
-  private pendingProps?: Partial<AgentProps>;
   private isRunning = false;
 
-  constructor({
-    id,
-    name,
-    model,
-    providerOptions,
-    systemPrompt,
-    tools,
-    debug,
-  }: AgentProps) {
+  constructor({ id, name, model, providerOptions, systemPrompt, tools, debug }: AgentProps) {
     this.id = id ?? nanoid(10);
     this.name = name ?? "anonymous";
     this.model = model;
@@ -42,48 +41,64 @@ class Agent {
     this.debug = Boolean(debug);
   }
 
-  public updateProps(props: Omit<AgentProps, "id" | "name">) {
+  public updateProps(props: Omit<AgentProps, "id" | "name">): boolean {
     if (this.isRunning) {
-      this.log(`updateProps, pending, props=${JSON.stringify(props)}`);
-      this.pendingProps = { ...props };
-      return;
+      this.log(LogLevel.WARN, `updateProps, skipped because agent is running`);
+      return false;
     }
 
     if (props.model) {
-      this.log(`updateProps, model=${props.model}`);
+      const str = JSON.stringify(props.model);
+      this.log(LogLevel.INFO, `updateProps, model=${str}`);
       this.model = props.model;
     }
 
     if (props.providerOptions) {
-      this.log(`updateProps, providerOptions=${props.providerOptions}`);
+      const str = JSON.stringify(props.providerOptions);
+      this.log(LogLevel.INFO, `updateProps, providerOptions=${str}`);
       this.providerOptions = { ...props.providerOptions }; // copy.
     }
 
     if (props.systemPrompt) {
-      this.log(`updateProps, systemPrompt=${props.systemPrompt}`);
+      this.log(LogLevel.INFO, `updateProps, systemPrompt=${props.systemPrompt}`);
       this.systemPrompt = props.systemPrompt;
     }
 
     if (props.tools) {
-      this.log(`updateProps, tools=${props.tools}`);
+      const str = JSON.stringify(props.tools);
+      this.log(LogLevel.INFO, `updateProps, tools=${str}`);
       this.tools = [...props.tools]; // copy.
     }
 
-    this.pendingProps = undefined; // clear.
+    return true;
   }
 
-  public start(prompt: AgentPrompt) {
-    this.log(`start, prompt=${JSON.stringify(prompt)}`);
+  public start(prompt: AgentPrompt): boolean {
+    this.log(LogLevel.INFO, `start, prompt=${JSON.stringify(prompt)}`);
+
+    if (this.isRunning) {
+      this.log(LogLevel.WARN, `start, skipped because agent is running`);
+      return false;
+    }
+
     // TODO (matthew)
+    return true;
   }
 
-  public steer(prompt: AgentPrompt) {
-    this.log(`steer, prompt=${JSON.stringify(prompt)}`);
+  public steer(prompt: AgentPrompt): boolean {
+    this.log(LogLevel.INFO, `steer, prompt=${JSON.stringify(prompt)}`);
+
+    if (!this.isRunning) {
+      this.log(LogLevel.WARN, `steer, skipped because agent is not running`);
+      return false;
+    }
+
     // TODO (matthew)
+    return true;
   }
 
   public abort(reason?: string) {
-    this.log(`abort, reason=${reason}`);
+    this.log(LogLevel.INFO, `abort, reason=${reason}`);
     this.abortController.abort(reason);
     this.abortController = new AbortController();
   }
@@ -93,9 +108,39 @@ class Agent {
     return () => this.listeners.delete(l);
   }
 
-  private log(msg: string) {
-    if (this.debug) {
-      console.log(`[${Date.now()}][${this.id}][${this.name}] ${msg}`);
+  public waitForIdle(): Promise<void> {
+    return Promise.resolve(); // TODO (matthew)
+  }
+
+  private emit(e: AgentEvent) {
+    this.listeners.forEach((l) => l(e));
+  }
+
+  private log(level: LogLevel, msg: string) {
+    if (!this.debug) {
+      return;
+    }
+
+    msg = `[${Date.now()}][${this.id}][${this.name}] ${msg}`;
+    switch (level) {
+      case LogLevel.TRACE:
+        console.trace(msg);
+        break;
+      case LogLevel.DEBUG:
+        console.debug(msg);
+        break;
+      case LogLevel.INFO:
+        console.info(msg);
+        break;
+      case LogLevel.WARN:
+        console.warn(msg);
+        break;
+      case LogLevel.ERROR:
+        console.error(msg);
+        break;
+      default:
+        console.log(msg);
+        break;
     }
   }
 }
