@@ -2,10 +2,16 @@ import {
   streamText,
   type AsyncIterableStream,
   type LanguageModel,
+  type TextPart,
   type TextStreamPart,
+  type ToolCallPart,
+  type ToolResultPart,
+  type AssistantModelMessage,
+  type ToolModelMessage,
   type ToolSet,
 } from "ai";
 import { nanoid } from "nanoid";
+import { serializeError } from "serialize-error";
 import { z } from "zod";
 
 import {
@@ -151,6 +157,10 @@ class Agent {
     });
 
     let pendingPrompt: AgentPrompt | undefined = prompt;
+    let assistantMessage: AssistantModelMessage | undefined;
+    let pushReasoningToAssistantMessage = true; // TODO (matthew)
+    let pushTextToAssistantMessage = true; // TODO (matthew)
+
     while (pendingPrompt) {
       const stream = await this.run(pendingPrompt);
       for await (const part of stream) {
@@ -160,73 +170,161 @@ class Agent {
         // https://ai-sdk.dev/docs/ai-sdk-core/generating-text#fullstream-property
         switch (part.type) {
           case "start": {
+            assistantMessage = undefined;
+            pushReasoningToAssistantMessage = true;
+            pushTextToAssistantMessage = true;
             this.emit({
               type: AgentEventType.TURN_START,
-              part,
             });
             break;
           }
 
-          case "text-start": {
-            this.emit({
-              type: AgentEventType.TEXT_START,
-              part,
-            });
-            break;
-          }
-
-          case "text-delta": {
-            this.emit({
-              type: AgentEventType.TEXT_DELTA,
-              part,
-            });
-            break;
-          }
-
-          case "text-end": {
-            this.emit({
-              type: AgentEventType.TEXT_END,
-              part,
-            });
+          case "start-step": {
+            // Don't reset assistantMessage here.
+            pushReasoningToAssistantMessage = true;
+            pushTextToAssistantMessage = true;
             break;
           }
 
           case "reasoning-start": {
+            if (!assistantMessage) {
+              assistantMessage = {
+                role: "assistant",
+                content: [], // always array.
+              };
+            }
+
             this.emit({
               type: AgentEventType.REASONING_START,
-              part,
+              message: assistantMessage,
             });
+
             break;
           }
 
           case "reasoning-delta": {
+            // FIXME (matthew) ai sdk is not export ReasoningPart, so we use any.
+            if (Array.isArray(assistantMessage?.content)) {
+              const index = assistantMessage.content.findIndex((c) => c.type === "reasoning");
+              if (index >= 0) {
+                (assistantMessage.content[index] as /* ReasoningPart */ any).text += part.text;
+              } else {
+                assistantMessage.content.push({
+                  type: "reasoning",
+                  text: part.text,
+                });
+              }
+            } else {
+              // Should not happen.
+              this.log(LogLevel.WARN, `stream, reasoning-delta, content is not array`);
+            }
+
             this.emit({
-              type: AgentEventType.REASONING_DELTA,
-              part,
+              type: AgentEventType.REASONING_UPDATE,
+              message: assistantMessage,
             });
+
             break;
           }
 
           case "reasoning-end": {
             this.emit({
               type: AgentEventType.REASONING_END,
-              part,
+              message: assistantMessage,
+            });
+            break;
+          }
+
+          case "text-start": {
+            if (!assistantMessage) {
+              assistantMessage = {
+                role: "assistant",
+                content: [], // always array.
+              };
+            }
+
+            this.emit({
+              type: AgentEventType.TEXT_START,
+              message: assistantMessage,
+            });
+
+            break;
+          }
+
+          case "text-delta": {
+            if (Array.isArray(assistantMessage?.content)) {
+              const index = assistantMessage.content.findIndex((c) => c.type === "text");
+              if (index >= 0) {
+                (assistantMessage.content[index] as TextPart).text += part.text;
+              } else {
+                assistantMessage.content.push({
+                  type: "text",
+                  text: part.text,
+                });
+              }
+            } else {
+              // Should not happen.
+              this.log(LogLevel.WARN, `stream, text-delta, content is not array`);
+            }
+
+            this.emit({
+              type: AgentEventType.TEXT_UPDATE,
+              message: assistantMessage,
+            });
+
+            break;
+          }
+
+          case "text-end": {
+            this.emit({
+              type: AgentEventType.TEXT_END,
+              message: assistantMessage,
             });
             break;
           }
 
           case "tool-call": {
+            if (!assistantMessage) {
+              assistantMessage = {
+                role: "assistant",
+                content: [], // always array.
+              };
+            }
+
+            if (Array.isArray(assistantMessage?.content)) {
+              assistantMessage.content.push({
+                type: "tool-call",
+                toolCallId: part.toolCallId,
+                toolName: part.toolName,
+                input: part.input,
+              } as ToolCallPart);
+            } else {
+              // Should not happen.
+              this.log(LogLevel.WARN, `stream, tool-call, content is not array`);
+            }
+
             this.emit({
               type: AgentEventType.TOOL_CALL,
-              part,
+              message: assistantMessage,
             });
+
             break;
           }
 
           case "tool-result": {
             this.emit({
               type: AgentEventType.TOOL_RESULT,
-              part,
+              message: {
+                role: "tool",
+                content: [
+                  {
+                    type: "tool-result",
+                    toolCallId: part.toolCallId,
+                    toolName: part.toolName,
+                    output: part.output,
+                  } as ToolResultPart,
+                ],
+              } as ToolModelMessage,
             });
             break;
           }
@@ -234,43 +332,60 @@ class Agent {
           case "tool-error": {
             this.emit({
               type: AgentEventType.TOOL_ERROR,
-              part,
+              message: {
+                role: "tool",
+                content: [
+                  {
+                    type: "tool-result",
+                    toolCallId: part.toolCallId,
+                    toolName: part.toolName,
+                    output: {
+                      type: "error-json",
+                      value: serializeError(part.error),
+                    },
+                  } as ToolResultPart,
+                ],
+              } as ToolModelMessage,
             });
             break;
           }
 
+          case "finish-step": {
+            // DO NOTHING.
+            break;
+          }
+
           case "finish": {
+            // TODO (matthew)
             this.emit({
               type: AgentEventType.TURN_FINISH,
-              part,
             });
             break;
           }
 
           case "error": {
+            // TODO (matthew)
             this.emit({
               type: AgentEventType.TURN_ERROR,
-              part,
             });
             break;
           }
 
           case "abort": {
+            // TODO (matthew)
             this.emit({
               type: AgentEventType.TURN_ABORT,
-              part,
             });
             break;
           }
 
-          case "start-step":
           case "source":
           case "file":
           case "tool-input-start":
           case "tool-input-delta":
           case "tool-input-end":
+          case "tool-output-denied":
           case "raw":
-          case "finish-step":
           default: {
             this.log(LogLevel.WARN, `stream, unsupported part type=${part.type}`);
             break;

@@ -4,8 +4,6 @@ import type {
   UserModelMessage,
   AssistantModelMessage,
   ToolModelMessage,
-  TextStreamPart,
-  ToolSet,
 } from "ai";
 import { z } from "zod";
 
@@ -62,11 +60,11 @@ export enum AgentEventType {
   TURN_ABORT = "turn-abort",
 
   REASONING_START = "reasoning-start",
-  REASONING_DELTA = "reasoning-delta",
+  REASONING_UPDATE = "reasoning-update",
   REASONING_END = "reasoning-end",
 
   TEXT_START = "text-start",
-  TEXT_DELTA = "text-delta",
+  TEXT_UPDATE = "text-update",
   TEXT_END = "text-end",
 
   TOOL_CALL = "tool-call",
@@ -76,7 +74,7 @@ export enum AgentEventType {
 
 export interface AgentEvent {
   type: AgentEventType;
-  part?: TextStreamPart<ToolSet>;
+  message?: AgentMessage;
 }
 
 export type AgentEventListener = (e: AgentEvent) => void;
