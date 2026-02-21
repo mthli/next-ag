@@ -39,8 +39,9 @@ export interface AgentTool<
   I extends z.ZodTypeAny | undefined = undefined,
   O extends z.ZodTypeAny | undefined = undefined,
 > {
-  title: string;
+  name: string;
   description: string;
+  strict?: boolean;
   inputSchema?: I;
   outputSchema?: O;
   execute: (

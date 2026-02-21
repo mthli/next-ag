@@ -1,5 +1,6 @@
 import { streamText, type LanguageModel } from "ai";
 import { nanoid } from "nanoid";
+import { z } from "zod";
 
 import {
   AgentEvent,
@@ -29,7 +30,10 @@ class Agent {
 
   private abortController = new AbortController();
   private listeners = new Set<AgentEventListener>();
-  private _isRunning = false;
+  private followUpPrompts: AgentPrompt[] = [];
+  private steeringPrompt?: AgentPrompt;
+  private runningPromise?: Promise<void>;
+  private runningResolver?: () => void;
 
   constructor({ id, name, model, providerOptions, systemPrompt, tools, debug }: AgentProps) {
     this.id = id ?? nanoid(10);
@@ -77,11 +81,123 @@ class Agent {
     this.log(LogLevel.INFO, `start, prompt=${JSON.stringify(prompt)}`);
 
     if (this.isRunning()) {
-      this.log(LogLevel.WARN, `start, skipped because agent is running`);
+      this.log(LogLevel.WARN, "start, skipped, waitForIdle() or abort() first");
       return false;
     }
 
+    this.runningPromise = new Promise((resolve) => (this.runningResolver = resolve));
     // TODO (matthew)
+
+    const result = streamText({
+      model: this.model,
+      providerOptions: this.providerOptions,
+      system: this.systemPrompt,
+      tools: Object.fromEntries(
+        this.tools.map((t) => [
+          t.name,
+          {
+            description: t.description,
+            strict: Boolean(t.strict),
+            inputSchema: t.inputSchema ?? z.undefined(),
+            outputSchema: t.outputSchema ?? z.undefined(),
+            execute: (input: unknown, options: { abortSignal?: AbortSignal }) =>
+              t.execute(input, options.abortSignal ?? this.abortController.signal),
+          },
+        ]),
+      ),
+      abortSignal: this.abortController.signal,
+      ...prompt,
+    });
+
+    // https://ai-sdk.dev/docs/ai-sdk-core/generating-text#fullstream-property
+    for await (const part of result.fullStream) {
+      const partStr = JSON.stringify(part);
+      this.log(LogLevel.TRACE, `streamText, part=${partStr}`);
+
+      switch (part.type) {
+        case "start": {
+          // handle start of stream.
+          break;
+        }
+
+        case "start-step": {
+          // handle start of step.
+          break;
+        }
+
+        case "text-start": {
+          // handle text start.
+          break;
+        }
+
+        case "text-delta": {
+          // handle text delta here.
+          break;
+        }
+
+        case "text-end": {
+          // handle text end.
+          break;
+        }
+
+        case "reasoning-start": {
+          // handle reasoning start.
+          break;
+        }
+
+        case "reasoning-delta": {
+          // handle reasoning delta here.
+          break;
+        }
+
+        case "reasoning-end": {
+          // handle reasoning end.
+          break;
+        }
+
+        case "tool-call": {
+          // handle tool call here.
+          break;
+        }
+
+        case "tool-result": {
+          // handle tool result here.
+          break;
+        }
+
+        case "tool-error": {
+          // handle tool error.
+          break;
+        }
+
+        case "finish-step": {
+          // handle finish step.
+          break;
+        }
+
+        case "finish": {
+          // handle finish here.
+          break;
+        }
+
+        case "error": {
+          // handle error here.
+          break;
+        }
+
+        case "source":
+        case "file":
+        case "tool-input-start":
+        case "tool-input-delta":
+        case "tool-input-end":
+        case "raw":
+        default: {
+          this.log(LogLevel.WARN, `streamText, unsupported part type=${part.type}`);
+          break;
+        }
+      }
+    }
+
     return true;
   }
 
@@ -89,7 +205,19 @@ class Agent {
     this.log(LogLevel.INFO, `steer, prompt=${JSON.stringify(prompt)}`);
 
     if (!this.isRunning()) {
-      this.log(LogLevel.WARN, `steer, skipped because agent is not running`);
+      this.log(LogLevel.WARN, "steer, skipped, use start() instead");
+      return false;
+    }
+
+    // TODO (matthew)
+    return true;
+  }
+
+  public followUp(prompt: AgentPrompt): boolean {
+    this.log(LogLevel.INFO, `followUp, prompt=${JSON.stringify(prompt)}`);
+
+    if (!this.isRunning()) {
+      this.log(LogLevel.WARN, "followUp, skipped, use start() instead");
       return false;
     }
 
@@ -101,6 +229,9 @@ class Agent {
     this.log(LogLevel.INFO, `abort, reason=${reason}`);
     this.abortController.abort(reason);
     this.abortController = new AbortController();
+    this.runningResolver?.();
+    this.runningResolver = undefined;
+    this.runningPromise = undefined;
   }
 
   public subscribe(l: AgentEventListener): () => void {
@@ -109,11 +240,11 @@ class Agent {
   }
 
   public isRunning(): boolean {
-    return this._isRunning;
+    return Boolean(this.runningPromise);
   }
 
   public waitForIdle(): Promise<void> {
-    return Promise.resolve(); // TODO (matthew)
+    return this.runningPromise ?? Promise.resolve();
   }
 
   private emit(e: AgentEvent) {
