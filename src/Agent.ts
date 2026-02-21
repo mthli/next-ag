@@ -9,7 +9,8 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 
 import {
-  AgentEvent,
+  AgentEventType,
+  type AgentEvent,
   type AgentEventListener,
   type AgentPrompt,
   type AgentProps,
@@ -145,8 +146,13 @@ class Agent {
   }
 
   private async loop(prompt: AgentPrompt) {
-    while (true) {
-      const stream = await this.run(prompt);
+    this.emit({
+      type: AgentEventType.AGENT_START,
+    });
+
+    let pendingPrompt: AgentPrompt | undefined = prompt;
+    while (pendingPrompt) {
+      const stream = await this.run(pendingPrompt);
       for await (const part of stream) {
         const partStr = JSON.stringify(part);
         this.log(LogLevel.TRACE, `stream, part=${partStr}`);
@@ -154,12 +160,10 @@ class Agent {
         // https://ai-sdk.dev/docs/ai-sdk-core/generating-text#fullstream-property
         switch (part.type) {
           case "start": {
-            // handle start of stream.
-            break;
-          }
-
-          case "start-step": {
-            // handle start of step.
+            this.emit({
+              type: AgentEventType.TURN_START,
+              part,
+            });
             break;
           }
 
@@ -208,34 +212,43 @@ class Agent {
             break;
           }
 
-          case "finish-step": {
-            // handle finish step.
-            break;
-          }
-
           case "finish": {
-            // handle finish here.
+            this.emit({
+              type: AgentEventType.TURN_END,
+              part,
+            });
             break;
           }
 
           case "error": {
-            // handle error here.
+            this.emit({
+              type: AgentEventType.TURN_END,
+              part: part,
+            });
             break;
           }
 
+          case "start-step":
           case "source":
           case "file":
           case "tool-input-start":
           case "tool-input-delta":
           case "tool-input-end":
           case "raw":
+          case "finish-step":
           default: {
             this.log(LogLevel.WARN, `stream, unsupported part type=${part.type}`);
             break;
           }
         }
       }
+
+      pendingPrompt = this.followUpPrompts.shift();
     }
+
+    this.emit({
+      type: AgentEventType.AGENT_END,
+    });
   }
 
   private async run(prompt: AgentPrompt): Promise<AsyncIterableStream<TextStreamPart<ToolSet>>> {

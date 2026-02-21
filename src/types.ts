@@ -4,6 +4,8 @@ import type {
   UserModelMessage,
   AssistantModelMessage,
   ToolModelMessage,
+  TextStreamPart,
+  ToolSet,
 } from "ai";
 import { z } from "zod";
 
@@ -50,25 +52,29 @@ export interface AgentTool<
   ) => Promise<O extends z.ZodTypeAny ? z.infer<O> : unknown>;
 }
 
-export type AgentEventListener = (e: AgentEvent) => void;
-export enum AgentEvent {
+export enum AgentEventType {
   // Agent lifecycle.
-  AGENT_START = "agent_start",
-  AGENT_END = "agent_end",
+  AGENT_START = "agent-start",
+  AGENT_END = "agent-end",
 
   // Turn lifecycle - a turn is one assistant response + any tool calls/results.
-  TURN_START = "turn_start",
-  TURN_END = "turn_end",
+  TURN_START = "turn-start",
+  TURN_END = "turn-end",
 
-  // Message lifecycle - emitted for user, assistant, and tool messages.
-  MESSAGE = "message_start",
+  // Message lifecycle - emitted for user, assistant.
+  MESSAGE_START = "message-start",
   // Only emitted for assistant messages during streaming.
-  MESSAGE_UPDATE = "message_update",
-  MESSAGE_END = "message_end",
+  MESSAGE_DELTA = "message-delta",
+  MESSAGE_END = "message-end",
 
   // Tool execution lifecycle.
-  TOOL_EXECUTION_START = "tool_execution_start",
-  // Only emitted when there are more than 1 tool calls in a turn.
-  TOOL_EXECUTION_UPDATE = "tool_execution_update",
-  TOOL_EXECUTION_END = "tool_execution_end",
+  TOOL_EXECUTION_START = "tool-execution-start",
+  TOOL_EXECUTION_END = "tool-execution-end",
 }
+
+export interface AgentEvent {
+  type: AgentEventType;
+  part?: TextStreamPart<ToolSet>;
+}
+
+export type AgentEventListener = (e: AgentEvent) => void;
