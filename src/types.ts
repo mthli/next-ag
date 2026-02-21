@@ -29,10 +29,13 @@ export type AgentPrompt =
   };
 
 export interface AgentProps {
+  id?: string;
+  name?: string;
   model: LanguageModel;
   providerOptions?: Record<string, JSONObject>;
   systemPrompt?: string;
   tools?: AgentTool[];
+  debug?: boolean;
 }
 
 export interface AgentTool<

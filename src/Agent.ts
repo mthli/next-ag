@@ -1,4 +1,5 @@
 import { streamText, type LanguageModel } from "ai";
+import { nanoid } from "nanoid";
 
 import {
   AgentEvent,
@@ -9,51 +10,62 @@ import {
   type JSONObject,
 } from "./types";
 
-import log from "./log";
-const TAG = "Agent";
-
 class Agent {
+  private id: string;
+  private name: string;
   private model: LanguageModel;
   private providerOptions: Record<string, JSONObject>;
   private systemPrompt: string;
   private tools: AgentTool[];
+  private debug: boolean;
 
   private abortController = new AbortController();
   private listeners = new Set<AgentEventListener>();
   private pendingProps?: Partial<AgentProps>;
   private isRunning = false;
 
-  constructor({ model, providerOptions, systemPrompt, tools }: AgentProps) {
+  constructor({
+    id,
+    name,
+    model,
+    providerOptions,
+    systemPrompt,
+    tools,
+    debug,
+  }: AgentProps) {
+    this.id = id ?? nanoid(10);
+    this.name = name ?? "anonymous";
     this.model = model;
     this.providerOptions = { ...(providerOptions ?? {}) }; // copy.
     this.systemPrompt = systemPrompt ?? "";
     this.tools = [...(tools ?? [])]; // copy.
+    this.debug = Boolean(debug);
   }
 
-  public updateProps(props: Partial<AgentProps>) {
+  public updateProps(props: Omit<AgentProps, "id" | "name">) {
     if (this.isRunning) {
-      log(TAG, `updateProps, pending, props=${JSON.stringify(props)}`);
+      this.log(`updateProps, pending, props=${JSON.stringify(props)}`);
       this.pendingProps = { ...props };
       return;
     }
 
     if (props.model) {
-      log(TAG, `updateProps, model=${props.model}`);
+      this.log(`updateProps, model=${props.model}`);
       this.model = props.model;
     }
 
     if (props.providerOptions) {
-      log(TAG, `updateProps, providerOptions=${props.providerOptions}`);
+      this.log(`updateProps, providerOptions=${props.providerOptions}`);
       this.providerOptions = { ...props.providerOptions }; // copy.
     }
 
     if (props.systemPrompt) {
-      log(TAG, `updateProps, systemPrompt=${props.systemPrompt}`);
+      this.log(`updateProps, systemPrompt=${props.systemPrompt}`);
       this.systemPrompt = props.systemPrompt;
     }
 
     if (props.tools) {
-      log(TAG, `updateProps, tools=${props.tools}`);
+      this.log(`updateProps, tools=${props.tools}`);
       this.tools = [...props.tools]; // copy.
     }
 
@@ -61,17 +73,17 @@ class Agent {
   }
 
   public start(prompt: AgentPrompt) {
-    log(TAG, `start, prompt=${JSON.stringify(prompt)}`);
+    this.log(`start, prompt=${JSON.stringify(prompt)}`);
     // TODO (matthew)
   }
 
   public steer(prompt: AgentPrompt) {
-    log(TAG, `steer, prompt=${JSON.stringify(prompt)}`);
+    this.log(`steer, prompt=${JSON.stringify(prompt)}`);
     // TODO (matthew)
   }
 
   public abort(reason?: string) {
-    log(TAG, `abort, reason=${reason}`);
+    this.log(`abort, reason=${reason}`);
     this.abortController.abort(reason);
     this.abortController = new AbortController();
   }
@@ -79,6 +91,12 @@ class Agent {
   public subscribe(l: AgentEventListener): () => void {
     this.listeners.add(l);
     return () => this.listeners.delete(l);
+  }
+
+  private log(msg: string) {
+    if (this.debug) {
+      console.log(`[${Date.now()}][${this.id}][${this.name}] ${msg}`);
+    }
   }
 }
 
