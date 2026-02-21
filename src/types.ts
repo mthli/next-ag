@@ -53,23 +53,25 @@ export interface AgentTool<
 }
 
 export enum AgentEventType {
-  // Agent lifecycle.
   AGENT_START = "agent-start",
   AGENT_END = "agent-end",
 
-  // Turn lifecycle - a turn is one assistant response + any tool calls/results.
   TURN_START = "turn-start",
-  TURN_END = "turn-end",
+  TURN_FINISH = "turn-finish",
+  TURN_ERROR = "turn-error",
+  TURN_ABORT = "turn-abort",
 
-  // Message lifecycle - emitted for user, assistant.
-  MESSAGE_START = "message-start",
-  // Only emitted for assistant messages during streaming.
-  MESSAGE_DELTA = "message-delta",
-  MESSAGE_END = "message-end",
+  REASONING_START = "reasoning-start",
+  REASONING_DELTA = "reasoning-delta",
+  REASONING_END = "reasoning-end",
 
-  // Tool execution lifecycle.
-  TOOL_EXECUTION_START = "tool-execution-start",
-  TOOL_EXECUTION_END = "tool-execution-end",
+  TEXT_START = "text-start",
+  TEXT_DELTA = "text-delta",
+  TEXT_END = "text-end",
+
+  TOOL_CALL = "tool-call",
+  TOOL_RESULT = "tool-result",
+  TOOL_ERROR = "tool-error",
 }
 
 export interface AgentEvent {

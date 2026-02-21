@@ -168,53 +168,80 @@ class Agent {
           }
 
           case "text-start": {
-            // handle text start.
+            this.emit({
+              type: AgentEventType.TEXT_START,
+              part,
+            });
             break;
           }
 
           case "text-delta": {
-            // handle text delta here.
+            this.emit({
+              type: AgentEventType.TEXT_DELTA,
+              part,
+            });
             break;
           }
 
           case "text-end": {
-            // handle text end.
+            this.emit({
+              type: AgentEventType.TEXT_END,
+              part,
+            });
             break;
           }
 
           case "reasoning-start": {
-            // handle reasoning start.
+            this.emit({
+              type: AgentEventType.REASONING_START,
+              part,
+            });
             break;
           }
 
           case "reasoning-delta": {
-            // handle reasoning delta here.
+            this.emit({
+              type: AgentEventType.REASONING_DELTA,
+              part,
+            });
             break;
           }
 
           case "reasoning-end": {
-            // handle reasoning end.
+            this.emit({
+              type: AgentEventType.REASONING_END,
+              part,
+            });
             break;
           }
 
           case "tool-call": {
-            // handle tool call here.
+            this.emit({
+              type: AgentEventType.TOOL_CALL,
+              part,
+            });
             break;
           }
 
           case "tool-result": {
-            // handle tool result here.
+            this.emit({
+              type: AgentEventType.TOOL_RESULT,
+              part,
+            });
             break;
           }
 
           case "tool-error": {
-            // handle tool error.
+            this.emit({
+              type: AgentEventType.TOOL_ERROR,
+              part,
+            });
             break;
           }
 
           case "finish": {
             this.emit({
-              type: AgentEventType.TURN_END,
+              type: AgentEventType.TURN_FINISH,
               part,
             });
             break;
@@ -222,8 +249,16 @@ class Agent {
 
           case "error": {
             this.emit({
-              type: AgentEventType.TURN_END,
-              part: part,
+              type: AgentEventType.TURN_ERROR,
+              part,
+            });
+            break;
+          }
+
+          case "abort": {
+            this.emit({
+              type: AgentEventType.TURN_ABORT,
+              part,
             });
             break;
           }
@@ -243,6 +278,7 @@ class Agent {
         }
       }
 
+      // TODO (matthew)
       pendingPrompt = this.followUpPrompts.shift();
     }
 
