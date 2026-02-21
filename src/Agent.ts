@@ -1,4 +1,10 @@
-import { streamText, type LanguageModel } from "ai";
+import {
+  streamText,
+  type AsyncIterableStream,
+  type LanguageModel,
+  type TextStreamPart,
+  type ToolSet,
+} from "ai";
 import { nanoid } from "nanoid";
 import { z } from "zod";
 
@@ -32,6 +38,7 @@ class Agent {
   private listeners = new Set<AgentEventListener>();
   private followUpPrompts: AgentPrompt[] = [];
   private steeringPrompt?: AgentPrompt;
+  private pendingProps?: AgentProps;
   private runningPromise?: Promise<void>;
   private runningResolver?: () => void;
 
@@ -45,10 +52,11 @@ class Agent {
     this.debug = Boolean(debug);
   }
 
-  public updateProps(props: Omit<AgentProps, "id" | "name">): boolean {
+  public updateProps(props: Omit<AgentProps, "id" | "name">) {
     if (this.isRunning()) {
       this.log(LogLevel.WARN, `updateProps, skipped because agent is running`);
-      return false;
+      this.pendingProps = { ...props }; // copy.
+      return;
     }
 
     if (props.model) {
@@ -74,7 +82,7 @@ class Agent {
       this.tools = [...props.tools]; // copy.
     }
 
-    return true;
+    this.pendingProps = undefined; // clear.
   }
 
   public start(prompt: AgentPrompt): boolean {
@@ -86,118 +94,7 @@ class Agent {
     }
 
     this.runningPromise = new Promise((resolve) => (this.runningResolver = resolve));
-    // TODO (matthew)
-
-    const result = streamText({
-      model: this.model,
-      providerOptions: this.providerOptions,
-      system: this.systemPrompt,
-      tools: Object.fromEntries(
-        this.tools.map((t) => [
-          t.name,
-          {
-            description: t.description,
-            strict: Boolean(t.strict),
-            inputSchema: t.inputSchema ?? z.undefined(),
-            outputSchema: t.outputSchema ?? z.undefined(),
-            execute: (input: unknown, options: { abortSignal?: AbortSignal }) =>
-              t.execute(input, options.abortSignal ?? this.abortController.signal),
-          },
-        ]),
-      ),
-      abortSignal: this.abortController.signal,
-      ...prompt,
-    });
-
-    // https://ai-sdk.dev/docs/ai-sdk-core/generating-text#fullstream-property
-    for await (const part of result.fullStream) {
-      const partStr = JSON.stringify(part);
-      this.log(LogLevel.TRACE, `streamText, part=${partStr}`);
-
-      switch (part.type) {
-        case "start": {
-          // handle start of stream.
-          break;
-        }
-
-        case "start-step": {
-          // handle start of step.
-          break;
-        }
-
-        case "text-start": {
-          // handle text start.
-          break;
-        }
-
-        case "text-delta": {
-          // handle text delta here.
-          break;
-        }
-
-        case "text-end": {
-          // handle text end.
-          break;
-        }
-
-        case "reasoning-start": {
-          // handle reasoning start.
-          break;
-        }
-
-        case "reasoning-delta": {
-          // handle reasoning delta here.
-          break;
-        }
-
-        case "reasoning-end": {
-          // handle reasoning end.
-          break;
-        }
-
-        case "tool-call": {
-          // handle tool call here.
-          break;
-        }
-
-        case "tool-result": {
-          // handle tool result here.
-          break;
-        }
-
-        case "tool-error": {
-          // handle tool error.
-          break;
-        }
-
-        case "finish-step": {
-          // handle finish step.
-          break;
-        }
-
-        case "finish": {
-          // handle finish here.
-          break;
-        }
-
-        case "error": {
-          // handle error here.
-          break;
-        }
-
-        case "source":
-        case "file":
-        case "tool-input-start":
-        case "tool-input-delta":
-        case "tool-input-end":
-        case "raw":
-        default: {
-          this.log(LogLevel.WARN, `streamText, unsupported part type=${part.type}`);
-          break;
-        }
-      }
-    }
-
+    this.loop(prompt);
     return true;
   }
 
@@ -245,6 +142,125 @@ class Agent {
 
   public waitForIdle(): Promise<void> {
     return this.runningPromise ?? Promise.resolve();
+  }
+
+  private async loop(prompt: AgentPrompt) {
+    while (true) {
+      const stream = await this.run(prompt);
+      for await (const part of stream) {
+        const partStr = JSON.stringify(part);
+        this.log(LogLevel.TRACE, `stream, part=${partStr}`);
+
+        // https://ai-sdk.dev/docs/ai-sdk-core/generating-text#fullstream-property
+        switch (part.type) {
+          case "start": {
+            // handle start of stream.
+            break;
+          }
+
+          case "start-step": {
+            // handle start of step.
+            break;
+          }
+
+          case "text-start": {
+            // handle text start.
+            break;
+          }
+
+          case "text-delta": {
+            // handle text delta here.
+            break;
+          }
+
+          case "text-end": {
+            // handle text end.
+            break;
+          }
+
+          case "reasoning-start": {
+            // handle reasoning start.
+            break;
+          }
+
+          case "reasoning-delta": {
+            // handle reasoning delta here.
+            break;
+          }
+
+          case "reasoning-end": {
+            // handle reasoning end.
+            break;
+          }
+
+          case "tool-call": {
+            // handle tool call here.
+            break;
+          }
+
+          case "tool-result": {
+            // handle tool result here.
+            break;
+          }
+
+          case "tool-error": {
+            // handle tool error.
+            break;
+          }
+
+          case "finish-step": {
+            // handle finish step.
+            break;
+          }
+
+          case "finish": {
+            // handle finish here.
+            break;
+          }
+
+          case "error": {
+            // handle error here.
+            break;
+          }
+
+          case "source":
+          case "file":
+          case "tool-input-start":
+          case "tool-input-delta":
+          case "tool-input-end":
+          case "raw":
+          default: {
+            this.log(LogLevel.WARN, `stream, unsupported part type=${part.type}`);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  private async run(prompt: AgentPrompt): Promise<AsyncIterableStream<TextStreamPart<ToolSet>>> {
+    const result = streamText({
+      model: this.model,
+      providerOptions: this.providerOptions,
+      system: this.systemPrompt,
+      tools: Object.fromEntries(
+        this.tools.map((t) => [
+          t.name,
+          {
+            description: t.description,
+            strict: Boolean(t.strict),
+            inputSchema: t.inputSchema ?? z.undefined(),
+            outputSchema: t.outputSchema ?? z.undefined(),
+            execute: (input: unknown, options: { abortSignal?: AbortSignal }) =>
+              t.execute(input, options.abortSignal ?? this.abortController.signal),
+          },
+        ]),
+      ),
+      abortSignal: this.abortController.signal,
+      ...prompt,
+    });
+
+    return result.fullStream;
   }
 
   private emit(e: AgentEvent) {
