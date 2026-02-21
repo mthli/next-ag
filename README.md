@@ -1,6 +1,6 @@
 # next-ag
 
-Next AI Agent Framework 🪩
+Next Tiny AI Agents Framework 🪩
 
 **UNDER DEVELOPMENT.**
 
