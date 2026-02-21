@@ -1,8 +1,14 @@
 {
   "name": "next-ag",
-  "module": "index.ts",
-  "type": "module",
   "private": true,
+  "type": "module",
+  "module": "src/index.ts",
+  "scripts": {
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "ai": "^6.0.97"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/bun": "latest",
@@ -17,13 +23,7 @@
   "peerDependencies": {
     "typescript": "^5"
   },
-  "scripts": {
-    "prepare": "husky"
-  },
   "lint-staged": {
     "**/*": "prettier --write --ignore-unknown"
-  },
-  "dependencies": {
-    "ai": "^6.0.97"
   }
 }
