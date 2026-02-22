@@ -149,10 +149,6 @@ export type TurnAbortEvent = BaseAgentEvent<AgentEventType.TURN_ABORT> & {
   reason?: string;
 };
 
-export type TurnSteerEvent = BaseAgentEvent<AgentEventType.TURN_STEER> & {
-  steeringPrompt: AgentPrompt;
-};
-
 // prettier-ignore
 export type AgentEvent<T extends AgentEventType = AgentEventType> =
   T extends AgentEventType.TURN_FINISH
@@ -161,8 +157,6 @@ export type AgentEvent<T extends AgentEventType = AgentEventType> =
   ? TurnErrorEvent
   : T extends AgentEventType.TURN_ABORT
   ? TurnAbortEvent
-  : T extends AgentEventType.TURN_STEER
-  ? TurnSteerEvent
   : BaseAgentEvent<T>;
 
 export type AgentEventListener = (e: AgentEvent) => void;

@@ -290,24 +290,26 @@ class Agent {
       message: undefined,
     });
 
-    let pendingPrompt: AgentPrompt | undefined = prompt;
+    let pendingPrompts: AgentPrompt[] = [prompt];
     let turnMessage: AssistantModelMessage | undefined;
 
-    while (pendingPrompt) {
+    while (pendingPrompts.length > 0) {
       if (this.pendingProps) {
         this.updateProps(this.pendingProps);
         this.pendingProps = undefined;
       }
 
-      if (pendingPrompt.messages) {
-        this.context.push(...pendingPrompt.messages);
-      } else if (Array.isArray(pendingPrompt.prompt)) {
-        this.context.push(...pendingPrompt.prompt);
-      } else {
-        this.context.push({
-          role: "user",
-          content: pendingPrompt.prompt, // string.
-        } as UserModelMessage);
+      for (const pending of pendingPrompts) {
+        if (pending.messages) {
+          this.context.push(...pending.messages);
+        } else if (Array.isArray(pending.prompt)) {
+          this.context.push(...pending.prompt);
+        } else {
+          this.context.push({
+            role: "user",
+            content: pending.prompt, // string.
+          } as UserModelMessage);
+        }
       }
 
       const stream = await this.run({
@@ -637,9 +639,11 @@ class Agent {
               }
 
               if (this.steeringMode === SteeringMode.FIFO) {
-                pendingPrompt = this.steeringPrompts.shift();
+                const first = this.steeringPrompts.shift();
+                pendingPrompts = first ? [first] : [];
               } else {
-                // TODO (matthew)
+                pendingPrompts = [...this.steeringPrompts];
+                this.steeringPrompts = []; // clear.
               }
 
               this.emit({
@@ -647,7 +651,6 @@ class Agent {
                 agentName: this.name,
                 type: AgentEventType.TURN_STEER,
                 message: turnMessage,
-                steeringPrompt: pendingPrompt!,
               });
 
               break;
@@ -683,9 +686,11 @@ class Agent {
       }
 
       if (this.followUpMode === FollowUpMode.FIFO) {
-        pendingPrompt = this.followUpPrompts.shift();
+        const first = this.followUpPrompts.shift();
+        pendingPrompts = first ? [first] : [];
       } else {
-        // TODO (matthew)
+        pendingPrompts = [...this.followUpPrompts];
+        this.followUpPrompts = []; // clear.
       }
     }
 
