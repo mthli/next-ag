@@ -13,6 +13,14 @@ import { z } from "zod";
 export type JSONObject = { [key: string]: JSONValue | undefined };
 export type JSONArray = JSONValue[];
 
+export interface Logger {
+  trace: (id: string, name: string, msg: string) => void;
+  debug: (id: string, name: string, msg: string) => void;
+  info: (id: string, name: string, msg: string) => void;
+  warn: (id: string, name: string, msg: string) => void;
+  error: (id: string, name: string, msg: string) => void;
+}
+
 export type AgentMessage = UserModelMessage | AssistantModelMessage | ToolModelMessage;
 
 // You can either use `prompt` or `messages` but not both.
@@ -38,7 +46,7 @@ export interface AgentProps {
   temperature?: number;
   topP?: number;
   topK?: number;
-  debug?: boolean;
+  logger?: Logger;
 }
 
 export interface AgentTool<

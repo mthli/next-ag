@@ -8,7 +8,6 @@ const google = createGoogleGenerativeAI({
 
 const agent = new Agent({
   model: google("gemini-3-flash-preview"),
-  debug: true,
 });
 
 const unsubscribe = agent.subscribe((message) => {

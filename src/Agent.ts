@@ -25,6 +25,7 @@ import {
   type UpdateAgentProps,
   type AgentTool,
   type JSONObject,
+  type Logger,
 } from "./types";
 
 // Avoid outter code calling abort() with this reason.
@@ -48,7 +49,7 @@ class Agent {
   private temperature?: number;
   private topP?: number;
   private topK?: number;
-  private debug?: boolean;
+  private logger?: Logger;
 
   private steeringPrompts: AgentPrompt[] = [];
   private followUpPrompts: AgentPrompt[] = [];
@@ -62,10 +63,11 @@ class Agent {
   private runningResolver?: () => void;
 
   constructor(props: AgentProps) {
-    const { id, name, model } = props;
+    const { id, name, model, logger } = props;
     this.id = id ?? nanoid(10);
     this.name = name ?? "anonymous";
     this.model = model;
+    this.logger = logger;
     this.updateProps(props);
   }
 
@@ -82,7 +84,7 @@ class Agent {
     ];
 
     if (this.isRunning() && !validStages.includes(this.currentStage)) {
-      this.log(LogLevel.INFO, `updateProps, pending until next turn`);
+      this.logger?.info(this.id, this.name, "updateProps, pending until next turn");
       this.pendingProps = {
         ...(this.pendingProps ?? {}),
         ...props,
@@ -92,49 +94,49 @@ class Agent {
 
     if (props.hasOwnProperty("providerOptions")) {
       const str = JSON.stringify(props.providerOptions);
-      this.log(LogLevel.INFO, `updateProps, providerOptions=${str}`);
+      this.logger?.info(this.id, this.name, `updateProps, providerOptions=${str}`);
       this.providerOptions = props.providerOptions ? { ...props.providerOptions } : undefined; // copy.
     }
 
     if (props.hasOwnProperty("systemPrompt")) {
-      this.log(LogLevel.INFO, `updateProps, systemPrompt=${props.systemPrompt}`);
+      this.logger?.info(this.id, this.name, `updateProps, systemPrompt=${props.systemPrompt}`);
       this.systemPrompt = props.systemPrompt;
     }
 
     if (props.hasOwnProperty("tools")) {
       const str = JSON.stringify(props.tools);
-      this.log(LogLevel.INFO, `updateProps, tools=${str}`);
+      this.logger?.info(this.id, this.name, `updateProps, tools=${str}`);
       this.tools = props.tools ? [...props.tools] : undefined; // copy.
     }
 
     if (props.hasOwnProperty("temperature")) {
-      this.log(LogLevel.INFO, `updateProps, temperature=${props.temperature}`);
+      this.logger?.info(this.id, this.name, `updateProps, temperature=${props.temperature}`);
       this.temperature = props.temperature;
     }
 
     if (props.hasOwnProperty("topP")) {
-      this.log(LogLevel.INFO, `updateProps, topP=${props.topP}`);
+      this.logger?.info(this.id, this.name, `updateProps, topP=${props.topP}`);
       this.topP = props.topP;
     }
 
     if (props.hasOwnProperty("topK")) {
-      this.log(LogLevel.INFO, `updateProps, topK=${props.topK}`);
+      this.logger?.info(this.id, this.name, `updateProps, topK=${props.topK}`);
       this.topK = props.topK;
     }
 
-    if (props.hasOwnProperty("debug")) {
-      this.log(LogLevel.INFO, `updateProps, debug=${props.debug}`);
-      this.debug = props.debug;
+    if (props.hasOwnProperty("logger")) {
+      this.logger?.info(this.id, this.name, `updateProps, logger=${props.logger}`);
+      this.logger = props.logger;
     }
 
     this.pendingProps = undefined; // clear.
   }
 
   public start(prompt: AgentPrompt): boolean {
-    this.log(LogLevel.INFO, `start, prompt=${JSON.stringify(prompt)}`);
+    this.logger?.info(this.id, this.name, `start, prompt=${JSON.stringify(prompt)}`);
 
     if (this.isRunning()) {
-      this.log(LogLevel.WARN, "start, skipped, waitForIdle() or abort() first");
+      this.logger?.warn(this.id, this.name, "start, skipped, waitForIdle() or abort() first");
       return false;
     }
 
@@ -146,10 +148,10 @@ class Agent {
   }
 
   public steer(prompt: AgentPrompt): boolean {
-    this.log(LogLevel.INFO, `steer, prompt=${JSON.stringify(prompt)}`);
+    this.logger?.info(this.id, this.name, `steer, prompt=${JSON.stringify(prompt)}`);
 
     if (!this.isRunning()) {
-      this.log(LogLevel.WARN, "steer, skipped, use start() instead");
+      this.logger?.warn(this.id, this.name, "steer, skipped, use start() instead");
       return false;
     }
 
@@ -158,10 +160,10 @@ class Agent {
   }
 
   public followUp(prompt: AgentPrompt): boolean {
-    this.log(LogLevel.INFO, `followUp, prompt=${JSON.stringify(prompt)}`);
+    this.logger?.info(this.id, this.name, `followUp, prompt=${JSON.stringify(prompt)}`);
 
     if (!this.isRunning()) {
-      this.log(LogLevel.WARN, "followUp, skipped, use start() instead");
+      this.logger?.warn(this.id, this.name, "followUp, skipped, use start() instead");
       return false;
     }
 
@@ -175,7 +177,7 @@ class Agent {
       throw new Error(`abort reason can't be "${ABORT_REASON_STEER}", which is reserved for steer()`);
     }
 
-    this.log(LogLevel.INFO, `abort, reason=${reason}`);
+    this.logger?.info(this.id, this.name, `abort, reason=${reason}`);
     this.abortController.abort(reason);
     this.runningResolver?.();
     this.runningResolver = undefined;
@@ -228,7 +230,7 @@ class Agent {
 
       for await (const part of stream) {
         const partStr = JSON.stringify(part);
-        this.log(LogLevel.DEBUG, `stream, part=${partStr}`);
+        this.logger?.debug(this.id, this.name, `stream, part=${partStr}`);
 
         // https://ai-sdk.dev/docs/ai-sdk-core/generating-text#fullstream-property
         switch (part.type) {
@@ -254,7 +256,7 @@ class Agent {
                 content: [], // always array.
               };
 
-              this.log(LogLevel.DEBUG, "stream, reasoning-start, new turnMessage");
+              this.logger?.debug(this.id, this.name, "stream, reasoning-start, new turnMessage");
               this.context.push(turnMessage);
             }
 
@@ -323,7 +325,7 @@ class Agent {
                 content: [], // always array.
               };
 
-              this.log(LogLevel.DEBUG, "stream, text-start, new turnMessage");
+              this.logger?.debug(this.id, this.name, "stream, text-start, new turnMessage");
               this.context.push(turnMessage);
             }
 
@@ -391,7 +393,7 @@ class Agent {
                 content: [], // always array.
               };
 
-              this.log(LogLevel.DEBUG, "stream, tool-call, new turnMessage");
+              this.logger?.debug(this.id, this.name, "stream, tool-call, new turnMessage");
               this.context.push(turnMessage);
             }
 
@@ -467,7 +469,7 @@ class Agent {
 
           case "finish-step": {
             if (this.steeringPrompts.length > 0) {
-              this.log(LogLevel.DEBUG, "stream, finish-step, abort for steering");
+              this.logger?.debug(this.id, this.name, "stream, finish-step, abort for steering");
               this.abortController.abort(ABORT_REASON_STEER);
             }
             break;
@@ -548,7 +550,7 @@ class Agent {
           case "tool-output-denied":
           case "raw":
           default: {
-            this.log(LogLevel.WARN, `stream, unsupported part type=${part.type}`);
+            this.logger?.warn(this.id, this.name, `stream, unsupported part type=${part.type}`);
             break;
           }
         }
@@ -570,7 +572,7 @@ class Agent {
   }
 
   private async run(prompt: AgentPrompt): Promise<AsyncIterableStream<TextStreamPart<ToolSet>>> {
-    this.log(LogLevel.DEBUG, `run, prompt=${JSON.stringify(prompt)}`);
+    this.logger?.info(this.id, this.name, `run, prompt=${JSON.stringify(prompt)}`);
 
     let toolSet: ToolSet | undefined;
     if (this.tools && this.tools.length > 0) {
@@ -607,34 +609,6 @@ class Agent {
   private emit(e: AgentEvent) {
     this.currentStage = e.type;
     this.listeners.forEach((l) => l(e));
-  }
-
-  private log(level: LogLevel, msg: string) {
-    if (!this.debug) {
-      return;
-    }
-
-    msg = `[${Date.now()}][${this.id}][${this.name}] ${msg}`;
-    switch (level) {
-      case LogLevel.TRACE:
-        console.trace(msg);
-        break;
-      case LogLevel.DEBUG:
-        console.debug(msg);
-        break;
-      case LogLevel.INFO:
-        console.info(msg);
-        break;
-      case LogLevel.WARN:
-        console.warn(msg);
-        break;
-      case LogLevel.ERROR:
-        console.error(msg);
-        break;
-      default:
-        console.log(msg);
-        break;
-    }
   }
 }
 
