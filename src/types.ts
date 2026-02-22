@@ -13,12 +13,19 @@ import { z } from "zod";
 export type JSONObject = { [key: string]: JSONValue | undefined };
 export type JSONArray = JSONValue[];
 
+export interface Log {
+  agentId: string;
+  agentName: string;
+  message: string;
+  error?: unknown;
+}
+
 export interface Logger {
-  trace: (id: string, name: string, msg: string) => void;
-  debug: (id: string, name: string, msg: string) => void;
-  info: (id: string, name: string, msg: string) => void;
-  warn: (id: string, name: string, msg: string) => void;
-  error: (id: string, name: string, msg: string, error?: unknown) => void;
+  trace: (log: Log) => void;
+  debug: (log: Log) => void;
+  info: (log: Log) => void;
+  warn: (log: Log) => void;
+  error: (log: Log) => void;
 }
 
 export type AgentMessage = UserModelMessage | AssistantModelMessage | ToolModelMessage;
@@ -112,13 +119,14 @@ export interface AgentEventMessageMap {
 
 export type BaseAgentEvent<T extends AgentEventType> = {
   agentId: string;
+  agentName: string;
   type: T;
   message: AgentEventMessageMap[T];
 };
 
 export type TurnFinishEvent = BaseAgentEvent<AgentEventType.TURN_FINISH> & {
-  finishReason?: FinishReason;
-  totalUsage?: LanguageModelUsage;
+  finishReason: FinishReason;
+  totalUsage: LanguageModelUsage;
 };
 
 export type TurnErrorEvent = BaseAgentEvent<AgentEventType.TURN_ERROR> & {
@@ -130,7 +138,7 @@ export type TurnAbortEvent = BaseAgentEvent<AgentEventType.TURN_ABORT> & {
 };
 
 export type TurnSteerEvent = BaseAgentEvent<AgentEventType.TURN_STEER> & {
-  prompt: AgentPrompt;
+  steerPrompt: AgentPrompt;
 };
 
 // prettier-ignore

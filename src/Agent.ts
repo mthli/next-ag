@@ -51,8 +51,8 @@ class Agent {
   private topK?: number;
   private logger?: Logger;
 
-  private steeringPrompts: AgentPrompt[] = [];
   private followUpPrompts: AgentPrompt[] = [];
+  private steerPrompts: AgentPrompt[] = [];
   private context: AgentMessage[] = [];
 
   private abortController = new AbortController();
@@ -92,54 +92,91 @@ class Agent {
     ];
 
     if (this.isRunning() && !validStages.includes(this.currentStage)) {
-      this.logger?.info(this.id, this.name, "updateProps, pending until next turn");
+      this.logger?.info({
+        agentId: this.id,
+        agentName: this.name,
+        message: "updateProps, pending until next turn",
+      });
+
+      // merge + copy.
       this.pendingProps = {
         ...(this.pendingProps ?? {}),
         ...props,
-      }; // merge + copy.
+      };
+
       return;
     }
 
     if (props.hasOwnProperty("providerOptions")) {
-      const str = JSON.stringify(props.providerOptions);
-      this.logger?.info(this.id, this.name, `updateProps, providerOptions=${str}`);
       this.providerOptions = props.providerOptions ? { ...props.providerOptions } : undefined; // copy.
+      this.logger?.info({
+        agentId: this.id,
+        agentName: this.name,
+        message: `updateProps, providerOptions=${JSON.stringify(this.providerOptions)}`,
+      });
     }
 
     if (props.hasOwnProperty("systemPrompt")) {
-      this.logger?.info(this.id, this.name, `updateProps, systemPrompt=${props.systemPrompt}`);
       this.systemPrompt = props.systemPrompt;
+      this.logger?.info({
+        agentId: this.id,
+        agentName: this.name,
+        message: `updateProps, systemPrompt=${this.systemPrompt}`,
+      });
     }
 
     if (props.hasOwnProperty("tools")) {
-      const str = JSON.stringify(props.tools);
-      this.logger?.info(this.id, this.name, `updateProps, tools=${str}`);
       this.tools = props.tools ? [...props.tools] : undefined; // copy.
+      this.logger?.info({
+        agentId: this.id,
+        agentName: this.name,
+        message: `updateProps, tools=${JSON.stringify(this.tools)}`,
+      });
     }
 
     if (props.hasOwnProperty("temperature")) {
-      this.logger?.info(this.id, this.name, `updateProps, temperature=${props.temperature}`);
       this.temperature = props.temperature;
+      this.logger?.info({
+        agentId: this.id,
+        agentName: this.name,
+        message: `updateProps, temperature=${this.temperature}`,
+      });
     }
 
     if (props.hasOwnProperty("topP")) {
-      this.logger?.info(this.id, this.name, `updateProps, topP=${props.topP}`);
       this.topP = props.topP;
+      this.logger?.info({
+        agentId: this.id,
+        agentName: this.name,
+        message: `updateProps, topP=${this.topP}`,
+      });
     }
 
     if (props.hasOwnProperty("topK")) {
-      this.logger?.info(this.id, this.name, `updateProps, topK=${props.topK}`);
       this.topK = props.topK;
+      this.logger?.info({
+        agentId: this.id,
+        agentName: this.name,
+        message: `updateProps, topK=${this.topK}`,
+      });
     }
 
     this.pendingProps = undefined; // clear.
   }
 
   public start(prompt: AgentPrompt): boolean {
-    this.logger?.info(this.id, this.name, `start, prompt=${JSON.stringify(prompt)}`);
+    this.logger?.info({
+      agentId: this.id,
+      agentName: this.name,
+      message: `start, prompt=${JSON.stringify(prompt)}`,
+    });
 
     if (this.isRunning()) {
-      this.logger?.warn(this.id, this.name, "start, skipped, waitForIdle() or abort() first");
+      this.logger?.warn({
+        agentId: this.id,
+        agentName: this.name,
+        message: "start, skipped, waitForIdle() or abort() first",
+      });
       return false;
     }
 
@@ -151,22 +188,38 @@ class Agent {
   }
 
   public steer(prompt: AgentPrompt): boolean {
-    this.logger?.info(this.id, this.name, `steer, prompt=${JSON.stringify(prompt)}`);
+    this.logger?.info({
+      agentId: this.id,
+      agentName: this.name,
+      message: `steer, prompt=${JSON.stringify(prompt)}`,
+    });
 
     if (!this.isRunning()) {
-      this.logger?.warn(this.id, this.name, "steer, skipped, use start() instead");
+      this.logger?.warn({
+        agentId: this.id,
+        agentName: this.name,
+        message: "steer, skipped, use start() instead",
+      });
       return false;
     }
 
-    this.steeringPrompts.push({ ...prompt }); // copy.
+    this.steerPrompts.push({ ...prompt }); // copy.
     return true;
   }
 
   public followUp(prompt: AgentPrompt): boolean {
-    this.logger?.info(this.id, this.name, `followUp, prompt=${JSON.stringify(prompt)}`);
+    this.logger?.info({
+      agentId: this.id,
+      agentName: this.name,
+      message: `followUp, prompt=${JSON.stringify(prompt)}`,
+    });
 
     if (!this.isRunning()) {
-      this.logger?.warn(this.id, this.name, "followUp, skipped, use start() instead");
+      this.logger?.warn({
+        agentId: this.id,
+        agentName: this.name,
+        message: "followUp, skipped, use start() instead",
+      });
       return false;
     }
 
@@ -180,7 +233,12 @@ class Agent {
       throw new Error(`abort reason can't be "${ABORT_REASON_STEER}", which is reserved for steer()`);
     }
 
-    this.logger?.info(this.id, this.name, `abort, reason=${reason}`);
+    this.logger?.info({
+      agentId: this.id,
+      agentName: this.name,
+      message: `abort, reason=${reason}`,
+    });
+
     this.abortController.abort(reason);
     this.runningResolver?.();
     this.runningResolver = undefined;
@@ -203,6 +261,7 @@ class Agent {
   private async loop(prompt: AgentPrompt) {
     this.emit({
       agentId: this.id,
+      agentName: this.name,
       type: AgentEventType.AGENT_START,
       message: undefined,
     });
@@ -232,8 +291,11 @@ class Agent {
       });
 
       for await (const part of stream) {
-        const partStr = JSON.stringify(part);
-        this.logger?.debug(this.id, this.name, `stream, part=${partStr}`);
+        this.logger?.debug({
+          agentId: this.id,
+          agentName: this.name,
+          message: `stream, part=${JSON.stringify(part)}`,
+        });
 
         // https://ai-sdk.dev/docs/ai-sdk-core/generating-text#fullstream-property
         switch (part.type) {
@@ -241,6 +303,7 @@ class Agent {
             turnMessage = undefined;
             this.emit({
               agentId: this.id,
+              agentName: this.name,
               type: AgentEventType.TURN_START,
               message: undefined,
             });
@@ -259,8 +322,12 @@ class Agent {
                 content: [], // always array.
               };
 
-              this.logger?.debug(this.id, this.name, "stream, reasoning-start, new turnMessage");
               this.context.push(turnMessage);
+              this.logger?.debug({
+                agentId: this.id,
+                agentName: this.name,
+                message: "stream, reasoning-start, new turnMessage",
+              });
             }
 
             if (Array.isArray(turnMessage?.content)) {
@@ -275,6 +342,7 @@ class Agent {
 
             this.emit({
               agentId: this.id,
+              agentName: this.name,
               type: AgentEventType.REASONING_START,
               message: turnMessage,
             });
@@ -299,6 +367,7 @@ class Agent {
 
             this.emit({
               agentId: this.id,
+              agentName: this.name,
               type: AgentEventType.REASONING_UPDATE,
               message: turnMessage,
             });
@@ -314,6 +383,7 @@ class Agent {
 
             this.emit({
               agentId: this.id,
+              agentName: this.name,
               type: AgentEventType.REASONING_END,
               message: turnMessage,
             });
@@ -328,8 +398,12 @@ class Agent {
                 content: [], // always array.
               };
 
-              this.logger?.debug(this.id, this.name, "stream, text-start, new turnMessage");
               this.context.push(turnMessage);
+              this.logger?.debug({
+                agentId: this.id,
+                agentName: this.name,
+                message: "stream, text-start, new turnMessage",
+              });
             }
 
             if (Array.isArray(turnMessage?.content)) {
@@ -344,6 +418,7 @@ class Agent {
 
             this.emit({
               agentId: this.id,
+              agentName: this.name,
               type: AgentEventType.TEXT_START,
               message: turnMessage,
             });
@@ -367,6 +442,7 @@ class Agent {
 
             this.emit({
               agentId: this.id,
+              agentName: this.name,
               type: AgentEventType.TEXT_UPDATE,
               message: turnMessage,
             });
@@ -382,6 +458,7 @@ class Agent {
 
             this.emit({
               agentId: this.id,
+              agentName: this.name,
               type: AgentEventType.TEXT_END,
               message: turnMessage,
             });
@@ -396,8 +473,12 @@ class Agent {
                 content: [], // always array.
               };
 
-              this.logger?.debug(this.id, this.name, "stream, tool-call, new turnMessage");
               this.context.push(turnMessage);
+              this.logger?.debug({
+                agentId: this.id,
+                agentName: this.name,
+                message: "stream, tool-call, new turnMessage",
+              });
             }
 
             if (Array.isArray(turnMessage?.content)) {
@@ -414,6 +495,7 @@ class Agent {
 
             this.emit({
               agentId: this.id,
+              agentName: this.name,
               type: AgentEventType.TOOL_CALL,
               message: turnMessage,
             });
@@ -437,6 +519,7 @@ class Agent {
             this.context.push(message);
             this.emit({
               agentId: this.id,
+              agentName: this.name,
               type: AgentEventType.TOOL_RESULT,
               message,
             });
@@ -463,6 +546,7 @@ class Agent {
             this.context.push(message);
             this.emit({
               agentId: this.id,
+              agentName: this.name,
               type: AgentEventType.TOOL_ERROR,
               message,
             });
@@ -471,8 +555,12 @@ class Agent {
           }
 
           case "finish-step": {
-            if (this.steeringPrompts.length > 0) {
-              this.logger?.debug(this.id, this.name, "stream, finish-step, abort for steering");
+            if (this.steerPrompts.length > 0) {
+              this.logger?.debug({
+                agentId: this.id,
+                agentName: this.name,
+                message: "stream, finish-step, abort for steering",
+              });
               this.abortController.abort(ABORT_REASON_STEER);
             }
             break;
@@ -486,6 +574,7 @@ class Agent {
 
             this.emit({
               agentId: this.id,
+              agentName: this.name,
               type: AgentEventType.TURN_FINISH,
               message: turnMessage,
               finishReason: part.finishReason,
@@ -503,6 +592,7 @@ class Agent {
 
             this.emit({
               agentId: this.id,
+              agentName: this.name,
               type: AgentEventType.TURN_ERROR,
               message: turnMessage,
               error: part.error,
@@ -518,18 +608,19 @@ class Agent {
             }
 
             if (part.reason === ABORT_REASON_STEER) {
-              if (this.steeringPrompts.length === 0) {
-                throw new Error("abort for steering, but no pending steering prompts");
+              if (this.steerPrompts.length === 0) {
+                throw new Error("abort for steering, but no pending steer prompts");
               }
 
               // FIFO.
-              pendingPrompt = this.steeringPrompts.shift();
+              pendingPrompt = this.steerPrompts.shift();
 
               this.emit({
                 agentId: this.id,
+                agentName: this.name,
                 type: AgentEventType.TURN_STEER,
                 message: turnMessage,
-                prompt: pendingPrompt!,
+                steerPrompt: pendingPrompt!,
               });
 
               break;
@@ -537,6 +628,7 @@ class Agent {
 
             this.emit({
               agentId: this.id,
+              agentName: this.name,
               type: AgentEventType.TURN_ABORT,
               message: turnMessage,
               reason: part.reason,
@@ -553,7 +645,11 @@ class Agent {
           case "tool-output-denied":
           case "raw":
           default: {
-            this.logger?.warn(this.id, this.name, `stream, unsupported part type=${part.type}`);
+            this.logger?.warn({
+              agentId: this.id,
+              agentName: this.name,
+              message: `stream, unsupported part type=${part.type}`,
+            });
             break;
           }
         }
@@ -565,6 +661,7 @@ class Agent {
 
     this.emit({
       agentId: this.id,
+      agentName: this.name,
       type: AgentEventType.AGENT_END,
       message: undefined,
     });
@@ -575,7 +672,11 @@ class Agent {
   }
 
   private async run(prompt: AgentPrompt): Promise<AsyncIterableStream<TextStreamPart<ToolSet>>> {
-    this.logger?.info(this.id, this.name, `run, prompt=${JSON.stringify(prompt)}`);
+    this.logger?.info({
+      agentId: this.id,
+      agentName: this.name,
+      message: `run, prompt=${JSON.stringify(prompt)}`,
+    });
 
     let toolSet: ToolSet | undefined;
     if (this.tools && this.tools.length > 0) {

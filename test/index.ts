@@ -14,7 +14,12 @@ const agent = new Agent({
 });
 
 const unsubscribe = agent.subscribe((message) => {
-  logger.info(agent.id, agent.name, `subscribe, message=${JSON.stringify(message)}`);
+  const { agentId, agentName } = message;
+  logger.info({
+    agentId,
+    agentName,
+    message: `subscribe, message=${JSON.stringify(message)}`,
+  });
 });
 
 agent.start({
