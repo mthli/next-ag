@@ -1,9 +1,11 @@
 import type {
   LanguageModel,
+  LanguageModelUsage,
   JSONValue,
   UserModelMessage,
   AssistantModelMessage,
   ToolModelMessage,
+  FinishReason,
 } from "ai";
 import { z } from "zod";
 
@@ -17,11 +19,11 @@ export type AgentMessage = UserModelMessage | AssistantModelMessage | ToolModelM
 // prettier-ignore
 export type AgentPrompt =
   | {
-    prompt: string | Array<AgentMessage>;
+    prompt: string | AgentMessage[];
     messages?: never;
   }
   | {
-    messages: Array<AgentMessage>;
+    messages: AgentMessage[];
     prompt?: never;
   };
 
@@ -32,6 +34,9 @@ export interface AgentProps {
   providerOptions?: Record<string, JSONObject>;
   systemPrompt?: string;
   tools?: AgentTool[];
+  temperature?: number;
+  topP?: number;
+  topK?: number;
   debug?: boolean;
 }
 
@@ -81,7 +86,7 @@ export interface AgentEventMessageMap {
   [AgentEventType.TURN_FINISH]: AssistantModelMessage;
   [AgentEventType.TURN_ERROR]: AssistantModelMessage;
   [AgentEventType.TURN_ABORT]: AssistantModelMessage;
-  [AgentEventType.TURN_STEER]: undefined; // TODO (matthew)
+  [AgentEventType.TURN_STEER]: AssistantModelMessage;
 
   [AgentEventType.REASONING_START]: AssistantModelMessage;
   [AgentEventType.REASONING_UPDATE]: AssistantModelMessage;
@@ -96,10 +101,39 @@ export interface AgentEventMessageMap {
   [AgentEventType.TOOL_ERROR]: ToolModelMessage;
 }
 
-export interface AgentEvent<T extends AgentEventType = AgentEventType> {
+export type BaseAgentEvent<T extends AgentEventType> = {
   agentId: string;
   type: T;
   message: AgentEventMessageMap[T];
-}
+};
+
+export type TurnFinishEvent = BaseAgentEvent<AgentEventType.TURN_FINISH> & {
+  finishReason?: FinishReason;
+  totalUsage?: LanguageModelUsage;
+};
+
+export type TurnErrorEvent = BaseAgentEvent<AgentEventType.TURN_ERROR> & {
+  error: unknown;
+};
+
+export type TurnAbortEvent = BaseAgentEvent<AgentEventType.TURN_ABORT> & {
+  reason?: string;
+};
+
+export type TurnSteerEvent = BaseAgentEvent<AgentEventType.TURN_STEER> & {
+  prompt: AgentPrompt;
+};
+
+// prettier-ignore
+export type AgentEvent<T extends AgentEventType = AgentEventType> =
+  T extends AgentEventType.TURN_FINISH
+  ? TurnFinishEvent
+  : T extends AgentEventType.TURN_ERROR
+  ? TurnErrorEvent
+  : T extends AgentEventType.TURN_ABORT
+  ? TurnAbortEvent
+  : T extends AgentEventType.TURN_STEER
+  ? TurnSteerEvent
+  : BaseAgentEvent<T>;
 
 export type AgentEventListener = (e: AgentEvent) => void;

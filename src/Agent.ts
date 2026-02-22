@@ -37,9 +37,12 @@ class Agent {
   private name: string;
   private model: LanguageModel;
   private providerOptions: Record<string, JSONObject>;
-  private systemPrompt: string;
+  private systemPrompt?: string;
   private tools: AgentTool[];
-  private debug: boolean;
+  private temperature?: number;
+  private topP?: number;
+  private topK?: number;
+  private debug?: boolean;
 
   private abortController = new AbortController();
   private listeners = new Set<AgentEventListener>();
@@ -49,14 +52,28 @@ class Agent {
   private runningPromise?: Promise<void>;
   private runningResolver?: () => void;
 
-  constructor({ id, name, model, providerOptions, systemPrompt, tools, debug }: AgentProps) {
+  constructor({
+    id,
+    name,
+    model,
+    providerOptions,
+    systemPrompt,
+    tools,
+    temperature,
+    topP,
+    topK,
+    debug,
+  }: AgentProps) {
     this.id = id ?? nanoid(10);
     this.name = name ?? "anonymous";
     this.model = model;
     this.providerOptions = { ...(providerOptions ?? {}) }; // copy.
-    this.systemPrompt = systemPrompt ?? "";
+    this.systemPrompt = systemPrompt;
     this.tools = [...(tools ?? [])]; // copy.
-    this.debug = Boolean(debug);
+    this.temperature = temperature;
+    this.topP = topP;
+    this.topK = topK;
+    this.debug = debug;
   }
 
   public updateProps(props: Omit<AgentProps, "id" | "name">) {
@@ -78,7 +95,7 @@ class Agent {
       this.providerOptions = { ...props.providerOptions }; // copy.
     }
 
-    if (props.systemPrompt) {
+    if (props.hasOwnProperty("systemPrompt")) {
       this.log(LogLevel.INFO, `updateProps, systemPrompt=${props.systemPrompt}`);
       this.systemPrompt = props.systemPrompt;
     }
@@ -87,6 +104,21 @@ class Agent {
       const str = JSON.stringify(props.tools);
       this.log(LogLevel.INFO, `updateProps, tools=${str}`);
       this.tools = [...props.tools]; // copy.
+    }
+
+    if (props.hasOwnProperty("temperature")) {
+      this.log(LogLevel.INFO, `updateProps, temperature=${props.temperature}`);
+      this.temperature = props.temperature;
+    }
+
+    if (props.hasOwnProperty("topP")) {
+      this.log(LogLevel.INFO, `updateProps, topP=${props.topP}`);
+      this.topP = props.topP;
+    }
+
+    if (props.hasOwnProperty("topK")) {
+      this.log(LogLevel.INFO, `updateProps, topK=${props.topK}`);
+      this.topK = props.topK;
     }
 
     this.pendingProps = undefined; // clear.
@@ -219,11 +251,11 @@ class Agent {
                 (turnMessage.content[index] as /* ReasoningPart */ any).text += part.text;
               } else {
                 // Should not happen.
-                this.log(LogLevel.WARN, `stream, reasoning-delta, reasoning not found in content`);
+                throw new Error("reasoning-delta received, but no reasoning found in content");
               }
             } else {
               // Should not happen.
-              this.log(LogLevel.WARN, `stream, reasoning-delta, content is not array`);
+              throw new Error("reasoning-delta received, but content is not array");
             }
 
             this.emit({
@@ -236,11 +268,17 @@ class Agent {
           }
 
           case "reasoning-end": {
+            if (!turnMessage) {
+              // Should not happen.
+              throw new Error("reasoning-end received, but turnMessage not exists");
+            }
+
             this.emit({
               agentId: this.id,
               type: AgentEventType.REASONING_END,
               message: turnMessage,
             });
+
             break;
           }
 
@@ -278,11 +316,11 @@ class Agent {
                 (turnMessage.content[index] as TextPart).text += part.text;
               } else {
                 // Should not happen.
-                this.log(LogLevel.WARN, `stream, text-delta, text not found in content`);
+                throw new Error(`text-delta received, but no text found in content`);
               }
             } else {
               // Should not happen.
-              this.log(LogLevel.WARN, `stream, text-delta, content is not array`);
+              throw new Error(`text-delta received, but content is not array`);
             }
 
             this.emit({
@@ -295,11 +333,17 @@ class Agent {
           }
 
           case "text-end": {
+            if (!turnMessage) {
+              // Should not happen.
+              throw new Error("text-end received, but turnMessage not exists");
+            }
+
             this.emit({
               agentId: this.id,
               type: AgentEventType.TEXT_END,
               message: turnMessage,
             });
+
             break;
           }
 
@@ -379,32 +423,51 @@ class Agent {
           }
 
           case "finish": {
-            // TODO (matthew)
+            if (!turnMessage) {
+              // Should not happen.
+              throw new Error("finish received, but turnMessage not exists");
+            }
+
             this.emit({
               agentId: this.id,
               type: AgentEventType.TURN_FINISH,
               message: turnMessage,
+              finishReason: part.finishReason,
+              totalUsage: part.totalUsage,
             });
+
             break;
           }
 
           case "error": {
-            // TODO (matthew)
+            if (!turnMessage) {
+              // Should not happen.
+              throw new Error("error received, but turnMessage not exists");
+            }
+
             this.emit({
               agentId: this.id,
               type: AgentEventType.TURN_ERROR,
               message: turnMessage,
+              error: part.error,
             });
+
             break;
           }
 
           case "abort": {
-            // TODO (matthew)
+            if (!turnMessage) {
+              // Should not happen.
+              throw new Error("abort received, but turnMessage not exists");
+            }
+
             this.emit({
               agentId: this.id,
               type: AgentEventType.TURN_ABORT,
               message: turnMessage,
+              reason: part.reason,
             });
+
             break;
           }
 
@@ -433,6 +496,7 @@ class Agent {
     });
   }
 
+  // TODO (matthew) carry context.
   private async run(prompt: AgentPrompt): Promise<AsyncIterableStream<TextStreamPart<ToolSet>>> {
     const result = streamText({
       model: this.model,
@@ -451,6 +515,9 @@ class Agent {
           },
         ]),
       ),
+      temperature: this.temperature,
+      topP: this.topP,
+      topK: this.topK,
       abortSignal: this.abortController.signal,
       ...prompt,
     });
