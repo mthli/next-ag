@@ -1,4 +1,4 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createGoogleGenerativeAI, type GoogleLanguageModelOptions } from "@ai-sdk/google";
 
 import Agent from "@/Agent";
 import logger from "./logger";
@@ -11,6 +11,14 @@ const agent = new Agent({
   name: "test",
   model: google("gemini-3-flash-preview"),
   logger,
+  providerOptions: {
+    google: {
+      thinkingConfig: {
+        thinkingLevel: "high",
+        includeThoughts: true,
+      },
+    } satisfies GoogleLanguageModelOptions,
+  },
 });
 
 const unsubscribe = agent.subscribe((message) => {
