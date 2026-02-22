@@ -129,7 +129,7 @@ class Agent {
       return false;
     }
 
-    // TODO (matthew) steer.
+    this.steeringPrompt = { ...prompt }; // copy.
     return true;
   }
 
@@ -141,7 +141,7 @@ class Agent {
       return false;
     }
 
-    // TODO (matthew) followUp.
+    this.followUpPrompts.push({ ...prompt }); // copy.
     return true;
   }
 
