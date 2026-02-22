@@ -6,6 +6,7 @@ import {
   type TextStreamPart,
   type ToolCallPart,
   type ToolResultPart,
+  type UserModelMessage,
   type AssistantModelMessage,
   type ToolModelMessage,
   type ToolSet,
@@ -18,6 +19,7 @@ import {
   AgentEventType,
   type AgentEvent,
   type AgentEventListener,
+  type AgentMessage,
   type AgentPrompt,
   type AgentProps,
   type UpdateAgentProps,
@@ -50,6 +52,7 @@ class Agent {
 
   private steeringPrompts: AgentPrompt[] = [];
   private followUpPrompts: AgentPrompt[] = [];
+  private context: AgentMessage[] = [];
 
   private abortController = new AbortController();
   private listeners = new Set<AgentEventListener>();
@@ -208,7 +211,21 @@ class Agent {
         this.pendingProps = undefined;
       }
 
-      const stream = await this.run(pendingPrompt);
+      if (pendingPrompt.messages) {
+        this.context.push(...pendingPrompt.messages);
+      } else if (Array.isArray(pendingPrompt.prompt)) {
+        this.context.push(...pendingPrompt.prompt);
+      } else {
+        this.context.push({
+          role: "user",
+          content: pendingPrompt.prompt, // string.
+        } as UserModelMessage);
+      }
+
+      const stream = await this.run({
+        messages: this.context,
+      });
+
       for await (const part of stream) {
         const partStr = JSON.stringify(part);
         this.log(LogLevel.DEBUG, `stream, part=${partStr}`);
@@ -236,6 +253,9 @@ class Agent {
                 role: "assistant",
                 content: [], // always array.
               };
+
+              this.log(LogLevel.DEBUG, "reasoning-start, new turnMessage");
+              this.context.push(turnMessage);
             }
 
             if (Array.isArray(turnMessage?.content)) {
@@ -245,7 +265,7 @@ class Agent {
               });
             } else {
               // Should not happen.
-              throw new Error("reasoning-start received, but content is not array");
+              throw new Error("reasoning-start, but content is not array");
             }
 
             this.emit({
@@ -265,11 +285,11 @@ class Agent {
                 (turnMessage.content[index] as /* ReasoningPart */ any).text += part.text;
               } else {
                 // Should not happen.
-                throw new Error("reasoning-delta received, but no reasoning found in content");
+                throw new Error("reasoning-delta, but no reasoning found in content");
               }
             } else {
               // Should not happen.
-              throw new Error("reasoning-delta received, but content is not array");
+              throw new Error("reasoning-delta, but content is not array");
             }
 
             this.emit({
@@ -284,7 +304,7 @@ class Agent {
           case "reasoning-end": {
             if (!turnMessage) {
               // Should not happen.
-              throw new Error("reasoning-end received, but turnMessage not exists");
+              throw new Error("reasoning-end, but turnMessage not exists");
             }
 
             this.emit({
@@ -302,6 +322,9 @@ class Agent {
                 role: "assistant",
                 content: [], // always array.
               };
+
+              this.log(LogLevel.DEBUG, "text-start, new turnMessage");
+              this.context.push(turnMessage);
             }
 
             if (Array.isArray(turnMessage?.content)) {
@@ -311,7 +334,7 @@ class Agent {
               });
             } else {
               // Should not happen.
-              throw new Error("text-start received, but content is not array");
+              throw new Error("text-start, but content is not array");
             }
 
             this.emit({
@@ -330,11 +353,11 @@ class Agent {
                 (turnMessage.content[index] as TextPart).text += part.text;
               } else {
                 // Should not happen.
-                throw new Error(`text-delta received, but no text found in content`);
+                throw new Error("text-delta, but no text found in content");
               }
             } else {
               // Should not happen.
-              throw new Error(`text-delta received, but content is not array`);
+              throw new Error("text-delta, but content is not array");
             }
 
             this.emit({
@@ -349,7 +372,7 @@ class Agent {
           case "text-end": {
             if (!turnMessage) {
               // Should not happen.
-              throw new Error("text-end received, but turnMessage not exists");
+              throw new Error("text-end, but turnMessage not exists");
             }
 
             this.emit({
@@ -367,6 +390,9 @@ class Agent {
                 role: "assistant",
                 content: [], // always array.
               };
+
+              this.log(LogLevel.DEBUG, "tool-call, new turnMessage");
+              this.context.push(turnMessage);
             }
 
             if (Array.isArray(turnMessage?.content)) {
@@ -378,7 +404,7 @@ class Agent {
               } as ToolCallPart);
             } else {
               // Should not happen.
-              throw new Error("tool-call received, but content is not array");
+              throw new Error("tool-call, but content is not array");
             }
 
             this.emit({
@@ -391,49 +417,57 @@ class Agent {
           }
 
           case "tool-result": {
+            const message = {
+              role: "tool",
+              content: [
+                {
+                  type: "tool-result",
+                  toolCallId: part.toolCallId,
+                  toolName: part.toolName,
+                  output: part.output,
+                } as ToolResultPart,
+              ],
+            } as ToolModelMessage;
+
+            this.context.push(message);
             this.emit({
               agentId: this.id,
               type: AgentEventType.TOOL_RESULT,
-              message: {
-                role: "tool",
-                content: [
-                  {
-                    type: "tool-result",
-                    toolCallId: part.toolCallId,
-                    toolName: part.toolName,
-                    output: part.output,
-                  } as ToolResultPart,
-                ],
-              } as ToolModelMessage,
+              message,
             });
+
             break;
           }
 
           case "tool-error": {
+            const message = {
+              role: "tool",
+              content: [
+                {
+                  type: "tool-result",
+                  toolCallId: part.toolCallId,
+                  toolName: part.toolName,
+                  output: {
+                    type: "error-json",
+                    value: serializeError(part.error),
+                  },
+                } as ToolResultPart,
+              ],
+            } as ToolModelMessage;
+
+            this.context.push(message);
             this.emit({
               agentId: this.id,
               type: AgentEventType.TOOL_ERROR,
-              message: {
-                role: "tool",
-                content: [
-                  {
-                    type: "tool-result",
-                    toolCallId: part.toolCallId,
-                    toolName: part.toolName,
-                    output: {
-                      type: "error-json",
-                      value: serializeError(part.error),
-                    },
-                  } as ToolResultPart,
-                ],
-              } as ToolModelMessage,
+              message,
             });
+
             break;
           }
 
           case "finish-step": {
             if (this.steeringPrompts.length > 0) {
-              this.log(LogLevel.INFO, "finish-step, abort for steering");
+              this.log(LogLevel.DEBUG, "finish-step, abort for steering");
               this.abortController.abort(ABORT_REASON_STEER);
             }
             break;
@@ -442,7 +476,7 @@ class Agent {
           case "finish": {
             if (!turnMessage) {
               // Should not happen.
-              throw new Error("finish received, but turnMessage not exists");
+              throw new Error("finish, but turnMessage not exists");
             }
 
             this.emit({
@@ -459,7 +493,7 @@ class Agent {
           case "error": {
             if (!turnMessage) {
               // Should not happen.
-              throw new Error("error received, but turnMessage not exists");
+              throw new Error("error, but turnMessage not exists");
             }
 
             this.emit({
@@ -475,7 +509,7 @@ class Agent {
           case "abort": {
             if (!turnMessage) {
               // Should not happen.
-              throw new Error("abort received, but turnMessage not exists");
+              throw new Error("abort, but turnMessage not exists");
             }
 
             if (part.reason === ABORT_REASON_STEER) {
@@ -535,8 +569,9 @@ class Agent {
     this.runningPromise = undefined;
   }
 
-  // TODO (matthew) carry context.
   private async run(prompt: AgentPrompt): Promise<AsyncIterableStream<TextStreamPart<ToolSet>>> {
+    this.log(LogLevel.DEBUG, `run, prompt=${JSON.stringify(prompt)}`);
+
     let toolSet: ToolSet | undefined;
     if (this.tools && this.tools.length > 0) {
       toolSet = Object.fromEntries(
