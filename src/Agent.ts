@@ -45,10 +45,12 @@ class Agent {
   private topK?: number;
   private debug?: boolean;
 
-  private abortController = new AbortController();
-  private listeners = new Set<AgentEventListener>();
   private followUpPrompts: AgentPrompt[] = [];
   private steeringPrompt?: AgentPrompt;
+
+  private abortController = new AbortController();
+  private listeners = new Set<AgentEventListener>();
+  private currentStage?: AgentEventType;
   private pendingProps?: UpdateAgentProps;
   private runningPromise?: Promise<void>;
   private runningResolver?: () => void;
@@ -62,9 +64,22 @@ class Agent {
   }
 
   public updateProps(props: UpdateAgentProps) {
-    if (this.isRunning()) {
-      this.log(LogLevel.WARN, `updateProps, skipped because agent is running`);
-      this.pendingProps = { ...props }; // copy.
+    const validStages = [
+      undefined, // initial stage, no event emitted yet.
+      AgentEventType.AGENT_START,
+      AgentEventType.AGENT_END,
+      AgentEventType.TURN_FINISH,
+      AgentEventType.TURN_ERROR,
+      AgentEventType.TURN_ABORT,
+      AgentEventType.TURN_STEER,
+    ];
+
+    if (this.isRunning() && !validStages.includes(this.currentStage)) {
+      this.log(LogLevel.INFO, `updateProps, pending until next turn`);
+      this.pendingProps = {
+        ...(this.pendingProps ?? {}),
+        ...props,
+      }; // merge + copy.
       return;
     }
 
@@ -116,8 +131,10 @@ class Agent {
       return false;
     }
 
+    this.abortController = new AbortController();
     this.runningPromise = new Promise((resolve) => (this.runningResolver = resolve));
     this.loop(prompt);
+
     return true;
   }
 
@@ -148,7 +165,6 @@ class Agent {
   public abort(reason?: string) {
     this.log(LogLevel.INFO, `abort, reason=${reason}`);
     this.abortController.abort(reason);
-    this.abortController = new AbortController();
     this.runningResolver?.();
     this.runningResolver = undefined;
     this.runningPromise = undefined;
@@ -186,7 +202,7 @@ class Agent {
       const stream = await this.run(pendingPrompt);
       for await (const part of stream) {
         const partStr = JSON.stringify(part);
-        this.log(LogLevel.TRACE, `stream, part=${partStr}`);
+        this.log(LogLevel.DEBUG, `stream, part=${partStr}`);
 
         // https://ai-sdk.dev/docs/ai-sdk-core/generating-text#fullstream-property
         switch (part.type) {
@@ -220,7 +236,7 @@ class Agent {
               });
             } else {
               // Should not happen.
-              this.log(LogLevel.WARN, `stream, reasoning-start, content is not array`);
+              throw new Error("reasoning-start received, but content is not array");
             }
 
             this.emit({
@@ -286,7 +302,7 @@ class Agent {
               });
             } else {
               // Should not happen.
-              this.log(LogLevel.WARN, `stream, text-start, content is not array`);
+              throw new Error("text-start received, but content is not array");
             }
 
             this.emit({
@@ -353,7 +369,7 @@ class Agent {
               } as ToolCallPart);
             } else {
               // Should not happen.
-              this.log(LogLevel.WARN, `stream, tool-call, content is not array`);
+              throw new Error("tool-call received, but content is not array");
             }
 
             this.emit({
@@ -482,6 +498,10 @@ class Agent {
       type: AgentEventType.AGENT_END,
       message: undefined,
     });
+
+    this.runningResolver?.();
+    this.runningResolver = undefined;
+    this.runningPromise = undefined;
   }
 
   // TODO (matthew) carry context.
@@ -519,6 +539,7 @@ class Agent {
   }
 
   private emit(e: AgentEvent) {
+    this.currentStage = e.type;
     this.listeners.forEach((l) => l(e));
   }
 
