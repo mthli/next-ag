@@ -20,6 +20,7 @@ import {
   type AgentEventListener,
   type AgentPrompt,
   type AgentProps,
+  type UpdateAgentProps,
   type AgentTool,
   type JSONObject,
 } from "./types";
@@ -36,9 +37,9 @@ class Agent {
   private id: string;
   private name: string;
   private model: LanguageModel;
-  private providerOptions: Record<string, JSONObject>;
+  private providerOptions?: Record<string, JSONObject>;
   private systemPrompt?: string;
-  private tools: AgentTool[];
+  private tools?: AgentTool[];
   private temperature?: number;
   private topP?: number;
   private topK?: number;
@@ -48,51 +49,29 @@ class Agent {
   private listeners = new Set<AgentEventListener>();
   private followUpPrompts: AgentPrompt[] = [];
   private steeringPrompt?: AgentPrompt;
-  private pendingProps?: AgentProps;
+  private pendingProps?: UpdateAgentProps;
   private runningPromise?: Promise<void>;
   private runningResolver?: () => void;
 
-  constructor({
-    id,
-    name,
-    model,
-    providerOptions,
-    systemPrompt,
-    tools,
-    temperature,
-    topP,
-    topK,
-    debug,
-  }: AgentProps) {
+  constructor(props: AgentProps) {
+    const { id, name, model } = props;
     this.id = id ?? nanoid(10);
     this.name = name ?? "anonymous";
     this.model = model;
-    this.providerOptions = { ...(providerOptions ?? {}) }; // copy.
-    this.systemPrompt = systemPrompt;
-    this.tools = [...(tools ?? [])]; // copy.
-    this.temperature = temperature;
-    this.topP = topP;
-    this.topK = topK;
-    this.debug = debug;
+    this.updateProps(props);
   }
 
-  public updateProps(props: Omit<AgentProps, "id" | "name">) {
+  public updateProps(props: UpdateAgentProps) {
     if (this.isRunning()) {
       this.log(LogLevel.WARN, `updateProps, skipped because agent is running`);
       this.pendingProps = { ...props }; // copy.
       return;
     }
 
-    if (props.model) {
-      const str = JSON.stringify(props.model);
-      this.log(LogLevel.INFO, `updateProps, model=${str}`);
-      this.model = props.model;
-    }
-
-    if (props.providerOptions) {
+    if (props.hasOwnProperty("providerOptions")) {
       const str = JSON.stringify(props.providerOptions);
       this.log(LogLevel.INFO, `updateProps, providerOptions=${str}`);
-      this.providerOptions = { ...props.providerOptions }; // copy.
+      this.providerOptions = props.providerOptions ? { ...props.providerOptions } : undefined; // copy.
     }
 
     if (props.hasOwnProperty("systemPrompt")) {
@@ -100,10 +79,10 @@ class Agent {
       this.systemPrompt = props.systemPrompt;
     }
 
-    if (props.tools) {
+    if (props.hasOwnProperty("tools")) {
       const str = JSON.stringify(props.tools);
       this.log(LogLevel.INFO, `updateProps, tools=${str}`);
-      this.tools = [...props.tools]; // copy.
+      this.tools = props.tools ? [...props.tools] : undefined; // copy.
     }
 
     if (props.hasOwnProperty("temperature")) {
@@ -119,6 +98,11 @@ class Agent {
     if (props.hasOwnProperty("topK")) {
       this.log(LogLevel.INFO, `updateProps, topK=${props.topK}`);
       this.topK = props.topK;
+    }
+
+    if (props.hasOwnProperty("debug")) {
+      this.log(LogLevel.INFO, `updateProps, debug=${props.debug}`);
+      this.debug = props.debug;
     }
 
     this.pendingProps = undefined; // clear.
@@ -145,7 +129,7 @@ class Agent {
       return false;
     }
 
-    // TODO (matthew)
+    // TODO (matthew) steer.
     return true;
   }
 
@@ -157,7 +141,7 @@ class Agent {
       return false;
     }
 
-    // TODO (matthew)
+    // TODO (matthew) followUp.
     return true;
   }
 
@@ -194,6 +178,11 @@ class Agent {
     let turnMessage: AssistantModelMessage | undefined;
 
     while (pendingPrompt) {
+      if (this.pendingProps) {
+        this.updateProps(this.pendingProps);
+        this.pendingProps = undefined;
+      }
+
       const stream = await this.run(pendingPrompt);
       for await (const part of stream) {
         const partStr = JSON.stringify(part);
@@ -485,7 +474,6 @@ class Agent {
         }
       }
 
-      // TODO (matthew)
       pendingPrompt = this.followUpPrompts.shift();
     }
 
@@ -498,11 +486,9 @@ class Agent {
 
   // TODO (matthew) carry context.
   private async run(prompt: AgentPrompt): Promise<AsyncIterableStream<TextStreamPart<ToolSet>>> {
-    const result = streamText({
-      model: this.model,
-      providerOptions: this.providerOptions,
-      system: this.systemPrompt,
-      tools: Object.fromEntries(
+    let toolSet: ToolSet | undefined;
+    if (this.tools && this.tools.length > 0) {
+      toolSet = Object.fromEntries(
         this.tools.map((t) => [
           t.name,
           {
@@ -514,7 +500,14 @@ class Agent {
               t.execute(input, options.abortSignal ?? this.abortController.signal),
           },
         ]),
-      ),
+      );
+    }
+
+    const result = streamText({
+      model: this.model,
+      providerOptions: this.providerOptions,
+      system: this.systemPrompt,
+      tools: toolSet,
       temperature: this.temperature,
       topP: this.topP,
       topK: this.topK,

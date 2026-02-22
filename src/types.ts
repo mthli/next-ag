@@ -27,6 +27,7 @@ export type AgentPrompt =
     prompt?: never;
   };
 
+export type UpdateAgentProps = Omit<AgentProps, "id" | "name" | "model">;
 export interface AgentProps {
   id?: string;
   name?: string;
