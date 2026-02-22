@@ -60,10 +60,11 @@ class Agent {
   private followUpPrompts: AgentPrompt[] = [];
   private context: AgentMessage[] = [];
 
-  private abortController = new AbortController();
-  private listeners = new Set<AgentEventListener>();
   private currentStage?: AgentEventType;
   private pendingProps?: UpdateAgentProps;
+
+  private abortController = new AbortController();
+  private listeners = new Set<AgentEventListener>();
   private runningPromise?: Promise<void>;
   private runningResolver?: () => void;
 
@@ -186,7 +187,7 @@ class Agent {
       });
     }
 
-    this.pendingProps = undefined; // clear.
+    this.pendingProps = undefined; // reset.
   }
 
   public start(prompt: AgentPrompt): boolean {
@@ -205,9 +206,39 @@ class Agent {
       return false;
     }
 
-    this.abortController = new AbortController();
-    this.runningPromise = new Promise((resolve) => (this.runningResolver = resolve));
-    this.loop(prompt);
+    this.steeringPrompts = []; // clear.
+    this.followUpPrompts = []; // clear.
+    this.loop([prompt], false);
+
+    return true;
+  }
+
+  public recovery(): boolean {
+    this.logger?.info({
+      agentId: this.id,
+      agentName: this.name,
+      message: "recovery",
+    });
+
+    if (this.isRunning()) {
+      this.logger?.warn({
+        agentId: this.id,
+        agentName: this.name,
+        message: "recovery, skipped, waitForIdle() or abort() first",
+      });
+      return false;
+    }
+
+    if (this.context.length === 0) {
+      this.logger?.warn({
+        agentId: this.id,
+        agentName: this.name,
+        message: "recovery, skipped, no context to recover",
+      });
+      return false;
+    }
+
+    // TODO (matthew)
 
     return true;
   }
@@ -283,7 +314,10 @@ class Agent {
     return this.runningPromise ?? Promise.resolve();
   }
 
-  private async loop(prompt: AgentPrompt) {
+  private async loop(prompts: AgentPrompt[], recovery: boolean) {
+    this.abortController = new AbortController();
+    this.runningPromise = new Promise((resolve) => (this.runningResolver = resolve));
+
     this.emit({
       agentId: this.id,
       agentName: this.name,
@@ -291,9 +325,9 @@ class Agent {
       message: undefined,
     });
 
-    let pendingPrompts: AgentPrompt[] = [prompt];
+    let pendingPrompts: AgentPrompt[] = [...prompts]; // copy.
     let turnMessage: AssistantModelMessage | undefined;
-    let turnStartReason = TurnStartReason.USER;
+    let turnStartReason = recovery ? TurnStartReason.RECOVERY : TurnStartReason.START;
 
     while (pendingPrompts.length > 0) {
       if (this.pendingProps) {
@@ -366,7 +400,6 @@ class Agent {
                 text: "",
               });
             } else {
-              // Should not happen.
               throw new Error("reasoning-start, but content is not array");
             }
 
@@ -387,11 +420,9 @@ class Agent {
                 // FIXME (matthew) ai sdk is not export ReasoningPart, so we use any.
                 (turnMessage.content[index] as /* ReasoningPart */ any).text += part.text;
               } else {
-                // Should not happen.
                 throw new Error("reasoning-delta, but no reasoning found in content");
               }
             } else {
-              // Should not happen.
               throw new Error("reasoning-delta, but content is not array");
             }
 
@@ -407,7 +438,6 @@ class Agent {
 
           case "reasoning-end": {
             if (!turnMessage) {
-              // Should not happen.
               throw new Error("reasoning-end, but turnMessage not exists");
             }
 
@@ -442,7 +472,6 @@ class Agent {
                 text: "",
               });
             } else {
-              // Should not happen.
               throw new Error("text-start, but content is not array");
             }
 
@@ -462,11 +491,9 @@ class Agent {
               if (index >= 0) {
                 (turnMessage.content[index] as TextPart).text += part.text;
               } else {
-                // Should not happen.
                 throw new Error("text-delta, but no text found in content");
               }
             } else {
-              // Should not happen.
               throw new Error("text-delta, but content is not array");
             }
 
@@ -482,7 +509,6 @@ class Agent {
 
           case "text-end": {
             if (!turnMessage) {
-              // Should not happen.
               throw new Error("text-end, but turnMessage not exists");
             }
 
@@ -519,7 +545,6 @@ class Agent {
                 input: part.input,
               } as ToolCallPart);
             } else {
-              // Should not happen.
               throw new Error("tool-call, but content is not array");
             }
 
@@ -598,7 +623,6 @@ class Agent {
 
           case "finish": {
             if (!turnMessage) {
-              // Should not happen.
               throw new Error("finish, but turnMessage not exists");
             }
 
@@ -616,7 +640,6 @@ class Agent {
 
           case "error": {
             if (!turnMessage) {
-              // Should not happen.
               throw new Error("error, but turnMessage not exists");
             }
 
@@ -633,7 +656,6 @@ class Agent {
 
           case "abort": {
             if (!turnMessage) {
-              // Should not happen.
               throw new Error("abort, but turnMessage not exists");
             }
 
@@ -642,14 +664,7 @@ class Agent {
                 throw new Error("abort for steering, but no pending steering prompts");
               }
 
-              if (this.steeringMode === SteeringMode.FIFO) {
-                const first = this.steeringPrompts.shift();
-                pendingPrompts = first ? [first] : [];
-              } else {
-                pendingPrompts = [...this.steeringPrompts];
-                this.steeringPrompts = []; // clear.
-              }
-
+              pendingPrompts = this.dequeueSteeringPrompts();
               turnStartReason = TurnStartReason.STEER;
 
               this.emit({
@@ -691,14 +706,7 @@ class Agent {
         }
       }
 
-      if (this.followUpMode === FollowUpMode.FIFO) {
-        const first = this.followUpPrompts.shift();
-        pendingPrompts = first ? [first] : [];
-      } else {
-        pendingPrompts = [...this.followUpPrompts];
-        this.followUpPrompts = []; // clear.
-      }
-
+      pendingPrompts = this.dequeueFollowUpPrompts();
       turnStartReason = TurnStartReason.FOLLOW_UP;
     }
 
@@ -712,6 +720,29 @@ class Agent {
     this.runningResolver?.();
     this.runningResolver = undefined;
     this.runningPromise = undefined;
+  }
+
+  private dequeueSteeringPrompts(): AgentPrompt[] {
+    if (this.steeringMode === SteeringMode.FIFO) {
+      const first = this.steeringPrompts.shift();
+      return first ? [first] : [];
+      ``;
+    } else {
+      const promps = [...this.steeringPrompts];
+      this.steeringPrompts = []; // clear.
+      return promps;
+    }
+  }
+
+  private dequeueFollowUpPrompts(): AgentPrompt[] {
+    if (this.followUpMode === FollowUpMode.FIFO) {
+      const first = this.followUpPrompts.shift();
+      return first ? [first] : [];
+    } else {
+      const prompts = [...this.followUpPrompts];
+      this.followUpPrompts = []; // clear.
+      return prompts;
+    }
   }
 
   private async run(prompt: AgentPrompt): Promise<AsyncIterableStream<TextStreamPart<ToolSet>>> {
