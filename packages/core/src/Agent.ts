@@ -19,6 +19,7 @@ import {
   AgentEventType,
   SteeringMode,
   FollowUpMode,
+  TurnStartReason,
   type AgentEvent,
   type AgentEventListener,
   type AgentMessage,
@@ -292,6 +293,7 @@ class Agent {
 
     let pendingPrompts: AgentPrompt[] = [prompt];
     let turnMessage: AssistantModelMessage | undefined;
+    let turnStartReason = TurnStartReason.USER;
 
     while (pendingPrompts.length > 0) {
       if (this.pendingProps) {
@@ -332,6 +334,8 @@ class Agent {
               agentName: this.name,
               type: AgentEventType.TURN_START,
               message: undefined,
+              startReason: turnStartReason,
+              prompts: [...pendingPrompts], // copy.
             });
             break;
           }
@@ -646,6 +650,8 @@ class Agent {
                 this.steeringPrompts = []; // clear.
               }
 
+              turnStartReason = TurnStartReason.STEER;
+
               this.emit({
                 agentId: this.id,
                 agentName: this.name,
@@ -692,6 +698,8 @@ class Agent {
         pendingPrompts = [...this.followUpPrompts];
         this.followUpPrompts = []; // clear.
       }
+
+      turnStartReason = TurnStartReason.FOLLOW_UP;
     }
 
     this.emit({

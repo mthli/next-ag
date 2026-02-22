@@ -13,13 +13,6 @@ import { z } from "zod";
 export type JSONObject = { [key: string]: JSONValue | undefined };
 export type JSONArray = JSONValue[];
 
-export interface Log {
-  agentId: string;
-  agentName: string;
-  message: string;
-  error?: unknown;
-}
-
 export interface Logger {
   trace: (log: Log) => void;
   debug: (log: Log) => void;
@@ -28,13 +21,20 @@ export interface Logger {
   error: (log: Log) => void;
 }
 
+export interface Log {
+  agentId: string;
+  agentName: string;
+  message: string;
+  error?: unknown;
+}
+
 export type AgentMessage = UserModelMessage | AssistantModelMessage | ToolModelMessage;
 
 // You can either use `prompt` or `messages` but not both.
 // prettier-ignore
 export type AgentPrompt =
   | {
-    prompt: string | AgentMessage[];
+    prompt: string;
     messages?: never;
   }
   | {
@@ -106,6 +106,13 @@ export enum AgentEventType {
   TOOL_ERROR = "tool-error",
 }
 
+export type BaseAgentEvent<T extends AgentEventType> = {
+  agentId: string;
+  agentName: string;
+  type: T;
+  message: AgentEventMessageMap[T];
+};
+
 export interface AgentEventMessageMap {
   [AgentEventType.AGENT_START]: undefined;
   [AgentEventType.AGENT_END]: undefined;
@@ -129,12 +136,16 @@ export interface AgentEventMessageMap {
   [AgentEventType.TOOL_ERROR]: ToolModelMessage;
 }
 
-export type BaseAgentEvent<T extends AgentEventType> = {
-  agentId: string;
-  agentName: string;
-  type: T;
-  message: AgentEventMessageMap[T];
+export type TurnStartEvent = BaseAgentEvent<AgentEventType.TURN_START> & {
+  startReason: TurnStartReason;
+  prompts: AgentPrompt[];
 };
+
+export enum TurnStartReason {
+  USER = "user",
+  STEER = "steer",
+  FOLLOW_UP = "follow-up",
+}
 
 export type TurnFinishEvent = BaseAgentEvent<AgentEventType.TURN_FINISH> & {
   finishReason: FinishReason;
@@ -151,7 +162,9 @@ export type TurnAbortEvent = BaseAgentEvent<AgentEventType.TURN_ABORT> & {
 
 // prettier-ignore
 export type AgentEvent<T extends AgentEventType = AgentEventType> =
-  T extends AgentEventType.TURN_FINISH
+  T extends AgentEventType.TURN_START
+  ? TurnStartEvent
+  : T extends AgentEventType.TURN_FINISH
   ? TurnFinishEvent
   : T extends AgentEventType.TURN_ERROR
   ? TurnErrorEvent
