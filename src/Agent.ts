@@ -432,7 +432,10 @@ class Agent {
           }
 
           case "finish-step": {
-            // DO NOTHING.
+            if (this.steeringPrompts.length > 0) {
+              this.log(LogLevel.INFO, "finish-step, abort for steering");
+              this.abortController.abort(ABORT_REASON_STEER);
+            }
             break;
           }
 
@@ -475,6 +478,24 @@ class Agent {
               throw new Error("abort received, but turnMessage not exists");
             }
 
+            if (part.reason === ABORT_REASON_STEER) {
+              if (this.steeringPrompts.length === 0) {
+                throw new Error("abort for steering, but no pending steering prompts");
+              }
+
+              // FIFO.
+              pendingPrompt = this.steeringPrompts.shift();
+
+              this.emit({
+                agentId: this.id,
+                type: AgentEventType.TURN_STEER,
+                message: turnMessage,
+                prompt: pendingPrompt!,
+              });
+
+              break;
+            }
+
             this.emit({
               agentId: this.id,
               type: AgentEventType.TURN_ABORT,
@@ -499,6 +520,7 @@ class Agent {
         }
       }
 
+      // FIFO.
       pendingPrompt = this.followUpPrompts.shift();
     }
 

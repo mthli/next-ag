@@ -64,7 +64,7 @@ export enum AgentEventType {
   TURN_FINISH = "turn-finish",
   TURN_ERROR = "turn-error",
   TURN_ABORT = "turn-abort",
-  TURN_STEER = "turn-steer", // TODO (matthew)
+  TURN_STEER = "turn-steer",
 
   REASONING_START = "reasoning-start",
   REASONING_UPDATE = "reasoning-update",
