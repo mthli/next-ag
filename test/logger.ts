@@ -4,6 +4,12 @@ import type { Logger } from "@/types";
 
 const p = pino({
   level: "trace",
+  transport: {
+    target: "pino-pretty",
+    options: {
+      colorize: true,
+    },
+  },
 });
 
 const logger: Logger = {

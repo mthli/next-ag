@@ -8,6 +8,7 @@ const google = createGoogleGenerativeAI({
 });
 
 const agent = new Agent({
+  name: "test",
   model: google("gemini-3-flash-preview"),
   logger,
 });
