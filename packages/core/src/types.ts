@@ -53,6 +53,8 @@ export interface AgentProps {
   temperature?: number;
   topP?: number;
   topK?: number;
+  steeringMode?: SteeringMode;
+  followUpMode?: FollowUpMode;
   logger?: Logger;
 }
 
@@ -69,6 +71,16 @@ export interface AgentTool<
     input: I extends z.ZodTypeAny ? z.infer<I> : unknown,
     abortSignal: AbortSignal,
   ) => Promise<O extends z.ZodTypeAny ? z.infer<O> : unknown>;
+}
+
+export enum SteeringMode {
+  FIFO = "fifo",
+  ALL = "all", // default.
+}
+
+export enum FollowUpMode {
+  FIFO = "fifo", // default.
+  ALL = "all",
 }
 
 export enum AgentEventType {
@@ -138,7 +150,7 @@ export type TurnAbortEvent = BaseAgentEvent<AgentEventType.TURN_ABORT> & {
 };
 
 export type TurnSteerEvent = BaseAgentEvent<AgentEventType.TURN_STEER> & {
-  steerPrompt: AgentPrompt;
+  steeringPrompt: AgentPrompt;
 };
 
 // prettier-ignore

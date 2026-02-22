@@ -17,6 +17,8 @@ import { z } from "zod";
 
 import {
   AgentEventType,
+  SteeringMode,
+  FollowUpMode,
   type AgentEvent,
   type AgentEventListener,
   type AgentMessage,
@@ -49,10 +51,12 @@ class Agent {
   private temperature?: number;
   private topP?: number;
   private topK?: number;
+  private steeringMode: SteeringMode;
+  private followUpMode: FollowUpMode;
   private logger?: Logger;
 
+  private steeringPrompts: AgentPrompt[] = [];
   private followUpPrompts: AgentPrompt[] = [];
-  private steerPrompts: AgentPrompt[] = [];
   private context: AgentMessage[] = [];
 
   private abortController = new AbortController();
@@ -63,10 +67,12 @@ class Agent {
   private runningResolver?: () => void;
 
   constructor(props: AgentProps) {
-    const { id, name, model, logger } = props;
+    const { id, name, model, steeringMode, followUpMode, logger } = props;
     this._id = id ?? nanoid(10);
     this._name = name ?? "anonymous";
     this.model = model;
+    this.steeringMode = steeringMode ?? SteeringMode.ALL;
+    this.followUpMode = followUpMode ?? FollowUpMode.FIFO;
     this.logger = logger;
     this.updateProps(props);
   }
@@ -161,6 +167,24 @@ class Agent {
       });
     }
 
+    if (props.steeringMode) {
+      this.steeringMode = props.steeringMode;
+      this.logger?.info({
+        agentId: this.id,
+        agentName: this.name,
+        message: `updateProps, steeringMode=${this.steeringMode}`,
+      });
+    }
+
+    if (props.followUpMode) {
+      this.followUpMode = props.followUpMode;
+      this.logger?.info({
+        agentId: this.id,
+        agentName: this.name,
+        message: `updateProps, followUpMode=${this.followUpMode}`,
+      });
+    }
+
     this.pendingProps = undefined; // clear.
   }
 
@@ -203,7 +227,7 @@ class Agent {
       return false;
     }
 
-    this.steerPrompts.push({ ...prompt }); // copy.
+    this.steeringPrompts.push({ ...prompt }); // copy.
     return true;
   }
 
@@ -555,7 +579,7 @@ class Agent {
           }
 
           case "finish-step": {
-            if (this.steerPrompts.length > 0) {
+            if (this.steeringPrompts.length > 0) {
               this.logger?.debug({
                 agentId: this.id,
                 agentName: this.name,
@@ -608,19 +632,22 @@ class Agent {
             }
 
             if (part.reason === ABORT_REASON_STEER) {
-              if (this.steerPrompts.length === 0) {
-                throw new Error("abort for steering, but no pending steer prompts");
+              if (this.steeringPrompts.length === 0) {
+                throw new Error("abort for steering, but no pending steering prompts");
               }
 
-              // FIFO.
-              pendingPrompt = this.steerPrompts.shift();
+              if (this.steeringMode === SteeringMode.FIFO) {
+                pendingPrompt = this.steeringPrompts.shift();
+              } else {
+                // TODO (matthew)
+              }
 
               this.emit({
                 agentId: this.id,
                 agentName: this.name,
                 type: AgentEventType.TURN_STEER,
                 message: turnMessage,
-                steerPrompt: pendingPrompt!,
+                steeringPrompt: pendingPrompt!,
               });
 
               break;
@@ -655,8 +682,11 @@ class Agent {
         }
       }
 
-      // FIFO.
-      pendingPrompt = this.followUpPrompts.shift();
+      if (this.followUpMode === FollowUpMode.FIFO) {
+        pendingPrompt = this.followUpPrompts.shift();
+      } else {
+        // TODO (matthew)
+      }
     }
 
     this.emit({
