@@ -25,6 +25,9 @@ import {
   type JSONObject,
 } from "./types";
 
+// Avoid outter code calling abort() with this reason.
+const ABORT_REASON_STEER = "__steer__";
+
 enum LogLevel {
   TRACE = "trace",
   DEBUG = "debug",
@@ -45,8 +48,8 @@ class Agent {
   private topK?: number;
   private debug?: boolean;
 
+  private steeringPrompts: AgentPrompt[] = [];
   private followUpPrompts: AgentPrompt[] = [];
-  private steeringPrompt?: AgentPrompt;
 
   private abortController = new AbortController();
   private listeners = new Set<AgentEventListener>();
@@ -63,6 +66,7 @@ class Agent {
     this.updateProps(props);
   }
 
+  // Incremental update.
   public updateProps(props: UpdateAgentProps) {
     const validStages = [
       undefined, // initial stage, no event emitted yet.
@@ -146,7 +150,7 @@ class Agent {
       return false;
     }
 
-    this.steeringPrompt = { ...prompt }; // copy.
+    this.steeringPrompts.push({ ...prompt }); // copy.
     return true;
   }
 
@@ -163,6 +167,11 @@ class Agent {
   }
 
   public abort(reason?: string) {
+    if (reason === ABORT_REASON_STEER) {
+      // prettier-ignore
+      throw new Error(`abort reason can't be "${ABORT_REASON_STEER}", which is reserved for steer()`);
+    }
+
     this.log(LogLevel.INFO, `abort, reason=${reason}`);
     this.abortController.abort(reason);
     this.runningResolver?.();
