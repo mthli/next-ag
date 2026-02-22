@@ -1,6 +1,6 @@
 import pino from "pino";
 
-import type { Logger } from "@/types";
+import type { Logger } from "@next-ag/core";
 
 const p = pino({
   level: "trace",

@@ -1,0 +1,11 @@
+{
+  "name": "@next-ag/core",
+  "type": "module",
+  "module": "src/index.ts",
+  "dependencies": {
+    "ai": "^6.0.97",
+    "nanoid": "^5.1.6",
+    "serialize-error": "^13.0.1",
+    "zod": "^4.3.6"
+  }
+}
