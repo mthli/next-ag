@@ -153,7 +153,9 @@ class Agent {
 
   private async loop(prompt: AgentPrompt) {
     this.emit({
+      agentId: this.id,
       type: AgentEventType.AGENT_START,
+      message: undefined,
     });
 
     let pendingPrompt: AgentPrompt | undefined = prompt;
@@ -170,7 +172,9 @@ class Agent {
           case "start": {
             turnMessage = undefined;
             this.emit({
+              agentId: this.id,
               type: AgentEventType.TURN_START,
+              message: undefined,
             });
             break;
           }
@@ -199,6 +203,7 @@ class Agent {
             }
 
             this.emit({
+              agentId: this.id,
               type: AgentEventType.REASONING_START,
               message: turnMessage,
             });
@@ -222,6 +227,7 @@ class Agent {
             }
 
             this.emit({
+              agentId: this.id,
               type: AgentEventType.REASONING_UPDATE,
               message: turnMessage,
             });
@@ -231,6 +237,7 @@ class Agent {
 
           case "reasoning-end": {
             this.emit({
+              agentId: this.id,
               type: AgentEventType.REASONING_END,
               message: turnMessage,
             });
@@ -256,6 +263,7 @@ class Agent {
             }
 
             this.emit({
+              agentId: this.id,
               type: AgentEventType.TEXT_START,
               message: turnMessage,
             });
@@ -278,6 +286,7 @@ class Agent {
             }
 
             this.emit({
+              agentId: this.id,
               type: AgentEventType.TEXT_UPDATE,
               message: turnMessage,
             });
@@ -287,6 +296,7 @@ class Agent {
 
           case "text-end": {
             this.emit({
+              agentId: this.id,
               type: AgentEventType.TEXT_END,
               message: turnMessage,
             });
@@ -314,6 +324,7 @@ class Agent {
             }
 
             this.emit({
+              agentId: this.id,
               type: AgentEventType.TOOL_CALL,
               message: turnMessage,
             });
@@ -323,6 +334,7 @@ class Agent {
 
           case "tool-result": {
             this.emit({
+              agentId: this.id,
               type: AgentEventType.TOOL_RESULT,
               message: {
                 role: "tool",
@@ -341,6 +353,7 @@ class Agent {
 
           case "tool-error": {
             this.emit({
+              agentId: this.id,
               type: AgentEventType.TOOL_ERROR,
               message: {
                 role: "tool",
@@ -368,6 +381,7 @@ class Agent {
           case "finish": {
             // TODO (matthew)
             this.emit({
+              agentId: this.id,
               type: AgentEventType.TURN_FINISH,
               message: turnMessage,
             });
@@ -377,6 +391,7 @@ class Agent {
           case "error": {
             // TODO (matthew)
             this.emit({
+              agentId: this.id,
               type: AgentEventType.TURN_ERROR,
               message: turnMessage,
             });
@@ -386,6 +401,7 @@ class Agent {
           case "abort": {
             // TODO (matthew)
             this.emit({
+              agentId: this.id,
               type: AgentEventType.TURN_ABORT,
               message: turnMessage,
             });
@@ -411,7 +427,9 @@ class Agent {
     }
 
     this.emit({
+      agentId: this.id,
       type: AgentEventType.AGENT_END,
+      message: undefined,
     });
   }
 

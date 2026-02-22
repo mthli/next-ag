@@ -73,9 +73,33 @@ export enum AgentEventType {
   TOOL_ERROR = "tool-error",
 }
 
-export interface AgentEvent {
-  type: AgentEventType;
-  message?: AgentMessage;
+export interface AgentEventMessageMap {
+  [AgentEventType.AGENT_START]: undefined;
+  [AgentEventType.AGENT_END]: undefined;
+
+  [AgentEventType.TURN_START]: undefined;
+  [AgentEventType.TURN_FINISH]: AssistantModelMessage;
+  [AgentEventType.TURN_ERROR]: AssistantModelMessage;
+  [AgentEventType.TURN_ABORT]: AssistantModelMessage;
+  [AgentEventType.TURN_STEER]: undefined; // TODO (matthew)
+
+  [AgentEventType.REASONING_START]: AssistantModelMessage;
+  [AgentEventType.REASONING_UPDATE]: AssistantModelMessage;
+  [AgentEventType.REASONING_END]: AssistantModelMessage;
+
+  [AgentEventType.TEXT_START]: AssistantModelMessage;
+  [AgentEventType.TEXT_UPDATE]: AssistantModelMessage;
+  [AgentEventType.TEXT_END]: AssistantModelMessage;
+
+  [AgentEventType.TOOL_CALL]: AssistantModelMessage;
+  [AgentEventType.TOOL_RESULT]: ToolModelMessage;
+  [AgentEventType.TOOL_ERROR]: ToolModelMessage;
+}
+
+export interface AgentEvent<T extends AgentEventType = AgentEventType> {
+  agentId: string;
+  type: T;
+  message: AgentEventMessageMap[T];
 }
 
 export type AgentEventListener = (e: AgentEvent) => void;
