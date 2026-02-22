@@ -157,9 +157,7 @@ class Agent {
     });
 
     let pendingPrompt: AgentPrompt | undefined = prompt;
-    let assistantMessage: AssistantModelMessage | undefined;
-    let pushReasoningToAssistantMessage = true; // TODO (matthew)
-    let pushTextToAssistantMessage = true; // TODO (matthew)
+    let turnMessage: AssistantModelMessage | undefined;
 
     while (pendingPrompt) {
       const stream = await this.run(pendingPrompt);
@@ -170,9 +168,7 @@ class Agent {
         // https://ai-sdk.dev/docs/ai-sdk-core/generating-text#fullstream-property
         switch (part.type) {
           case "start": {
-            assistantMessage = undefined;
-            pushReasoningToAssistantMessage = true;
-            pushTextToAssistantMessage = true;
+            turnMessage = undefined;
             this.emit({
               type: AgentEventType.TURN_START,
             });
@@ -180,39 +176,45 @@ class Agent {
           }
 
           case "start-step": {
-            // Don't reset assistantMessage here.
-            pushReasoningToAssistantMessage = true;
-            pushTextToAssistantMessage = true;
+            // DO NOTHING.
             break;
           }
 
           case "reasoning-start": {
-            if (!assistantMessage) {
-              assistantMessage = {
+            if (!turnMessage) {
+              turnMessage = {
                 role: "assistant",
                 content: [], // always array.
               };
             }
 
+            if (Array.isArray(turnMessage?.content)) {
+              turnMessage.content.push({
+                type: "reasoning",
+                text: "",
+              });
+            } else {
+              // Should not happen.
+              this.log(LogLevel.WARN, `stream, reasoning-start, content is not array`);
+            }
+
             this.emit({
               type: AgentEventType.REASONING_START,
-              message: assistantMessage,
+              message: turnMessage,
             });
 
             break;
           }
 
           case "reasoning-delta": {
-            // FIXME (matthew) ai sdk is not export ReasoningPart, so we use any.
-            if (Array.isArray(assistantMessage?.content)) {
-              const index = assistantMessage.content.findIndex((c) => c.type === "reasoning");
+            if (Array.isArray(turnMessage?.content)) {
+              const index = turnMessage.content.findLastIndex((c) => c.type === "reasoning");
               if (index >= 0) {
-                (assistantMessage.content[index] as /* ReasoningPart */ any).text += part.text;
+                // FIXME (matthew) ai sdk is not export ReasoningPart, so we use any.
+                (turnMessage.content[index] as /* ReasoningPart */ any).text += part.text;
               } else {
-                assistantMessage.content.push({
-                  type: "reasoning",
-                  text: part.text,
-                });
+                // Should not happen.
+                this.log(LogLevel.WARN, `stream, reasoning-delta, reasoning not found in content`);
               }
             } else {
               // Should not happen.
@@ -221,7 +223,7 @@ class Agent {
 
             this.emit({
               type: AgentEventType.REASONING_UPDATE,
-              message: assistantMessage,
+              message: turnMessage,
             });
 
             break;
@@ -230,37 +232,45 @@ class Agent {
           case "reasoning-end": {
             this.emit({
               type: AgentEventType.REASONING_END,
-              message: assistantMessage,
+              message: turnMessage,
             });
             break;
           }
 
           case "text-start": {
-            if (!assistantMessage) {
-              assistantMessage = {
+            if (!turnMessage) {
+              turnMessage = {
                 role: "assistant",
                 content: [], // always array.
               };
             }
 
+            if (Array.isArray(turnMessage?.content)) {
+              turnMessage.content.push({
+                type: "text",
+                text: "",
+              });
+            } else {
+              // Should not happen.
+              this.log(LogLevel.WARN, `stream, text-start, content is not array`);
+            }
+
             this.emit({
               type: AgentEventType.TEXT_START,
-              message: assistantMessage,
+              message: turnMessage,
             });
 
             break;
           }
 
           case "text-delta": {
-            if (Array.isArray(assistantMessage?.content)) {
-              const index = assistantMessage.content.findIndex((c) => c.type === "text");
+            if (Array.isArray(turnMessage?.content)) {
+              const index = turnMessage.content.findLastIndex((c) => c.type === "text");
               if (index >= 0) {
-                (assistantMessage.content[index] as TextPart).text += part.text;
+                (turnMessage.content[index] as TextPart).text += part.text;
               } else {
-                assistantMessage.content.push({
-                  type: "text",
-                  text: part.text,
-                });
+                // Should not happen.
+                this.log(LogLevel.WARN, `stream, text-delta, text not found in content`);
               }
             } else {
               // Should not happen.
@@ -269,7 +279,7 @@ class Agent {
 
             this.emit({
               type: AgentEventType.TEXT_UPDATE,
-              message: assistantMessage,
+              message: turnMessage,
             });
 
             break;
@@ -278,21 +288,21 @@ class Agent {
           case "text-end": {
             this.emit({
               type: AgentEventType.TEXT_END,
-              message: assistantMessage,
+              message: turnMessage,
             });
             break;
           }
 
           case "tool-call": {
-            if (!assistantMessage) {
-              assistantMessage = {
+            if (!turnMessage) {
+              turnMessage = {
                 role: "assistant",
                 content: [], // always array.
               };
             }
 
-            if (Array.isArray(assistantMessage?.content)) {
-              assistantMessage.content.push({
+            if (Array.isArray(turnMessage?.content)) {
+              turnMessage.content.push({
                 type: "tool-call",
                 toolCallId: part.toolCallId,
                 toolName: part.toolName,
@@ -305,7 +315,7 @@ class Agent {
 
             this.emit({
               type: AgentEventType.TOOL_CALL,
-              message: assistantMessage,
+              message: turnMessage,
             });
 
             break;
@@ -359,6 +369,7 @@ class Agent {
             // TODO (matthew)
             this.emit({
               type: AgentEventType.TURN_FINISH,
+              message: turnMessage,
             });
             break;
           }
@@ -367,6 +378,7 @@ class Agent {
             // TODO (matthew)
             this.emit({
               type: AgentEventType.TURN_ERROR,
+              message: turnMessage,
             });
             break;
           }
@@ -375,6 +387,7 @@ class Agent {
             // TODO (matthew)
             this.emit({
               type: AgentEventType.TURN_ABORT,
+              message: turnMessage,
             });
             break;
           }
