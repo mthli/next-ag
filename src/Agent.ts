@@ -40,8 +40,8 @@ enum LogLevel {
 }
 
 class Agent {
-  private id: string;
-  private name: string;
+  private _id: string;
+  private _name: string;
   private model: LanguageModel;
   private providerOptions?: Record<string, JSONObject>;
   private systemPrompt?: string;
@@ -64,11 +64,19 @@ class Agent {
 
   constructor(props: AgentProps) {
     const { id, name, model, logger } = props;
-    this.id = id ?? nanoid(10);
-    this.name = name ?? "anonymous";
+    this._id = id ?? nanoid(10);
+    this._name = name ?? "anonymous";
     this.model = model;
     this.logger = logger;
     this.updateProps(props);
+  }
+
+  public get id() {
+    return this._id;
+  }
+
+  public get name() {
+    return this._name;
   }
 
   // Incremental update.
@@ -122,11 +130,6 @@ class Agent {
     if (props.hasOwnProperty("topK")) {
       this.logger?.info(this.id, this.name, `updateProps, topK=${props.topK}`);
       this.topK = props.topK;
-    }
-
-    if (props.hasOwnProperty("logger")) {
-      this.logger?.info(this.id, this.name, `updateProps, logger=${props.logger}`);
-      this.logger = props.logger;
     }
 
     this.pendingProps = undefined; // clear.

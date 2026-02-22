@@ -1,6 +1,7 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 import Agent from "@/Agent";
+import logger from "./logger";
 
 const google = createGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -8,10 +9,11 @@ const google = createGoogleGenerativeAI({
 
 const agent = new Agent({
   model: google("gemini-3-flash-preview"),
+  logger,
 });
 
 const unsubscribe = agent.subscribe((message) => {
-  // console.log(`onEvent, message=${JSON.stringify(message)}`);
+  logger.info(agent.id, agent.name, `subscribe, message=${JSON.stringify(message)}`);
 });
 
 agent.start({

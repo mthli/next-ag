@@ -18,7 +18,7 @@ export interface Logger {
   debug: (id: string, name: string, msg: string) => void;
   info: (id: string, name: string, msg: string) => void;
   warn: (id: string, name: string, msg: string) => void;
-  error: (id: string, name: string, msg: string) => void;
+  error: (id: string, name: string, msg: string, error?: unknown) => void;
 }
 
 export type AgentMessage = UserModelMessage | AssistantModelMessage | ToolModelMessage;
@@ -35,7 +35,7 @@ export type AgentPrompt =
     prompt?: never;
   };
 
-export type UpdateAgentProps = Omit<AgentProps, "id" | "name" | "model">;
+export type UpdateAgentProps = Omit<AgentProps, "id" | "name" | "model" | "logger">;
 export interface AgentProps {
   id?: string;
   name?: string;
