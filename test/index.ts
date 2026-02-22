@@ -17,7 +17,7 @@ const unsubscribe = agent.subscribe((message) => {
 });
 
 agent.start({
-  prompt: "What is the capital of France?",
+  prompt: "Does a list of all lists that do not contain themselves contain itself?",
 });
 
 await agent.waitForIdle();
