@@ -13,6 +13,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@ai-sdk/google": "^3.0.30",
     "@eslint/js": "^10.0.1",
     "@types/bun": "latest",
     "eslint": "^10.0.1",

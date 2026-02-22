@@ -254,7 +254,7 @@ class Agent {
                 content: [], // always array.
               };
 
-              this.log(LogLevel.DEBUG, "reasoning-start, new turnMessage");
+              this.log(LogLevel.DEBUG, "stream, reasoning-start, new turnMessage");
               this.context.push(turnMessage);
             }
 
@@ -323,7 +323,7 @@ class Agent {
                 content: [], // always array.
               };
 
-              this.log(LogLevel.DEBUG, "text-start, new turnMessage");
+              this.log(LogLevel.DEBUG, "stream, text-start, new turnMessage");
               this.context.push(turnMessage);
             }
 
@@ -391,7 +391,7 @@ class Agent {
                 content: [], // always array.
               };
 
-              this.log(LogLevel.DEBUG, "tool-call, new turnMessage");
+              this.log(LogLevel.DEBUG, "stream, tool-call, new turnMessage");
               this.context.push(turnMessage);
             }
 
@@ -467,7 +467,7 @@ class Agent {
 
           case "finish-step": {
             if (this.steeringPrompts.length > 0) {
-              this.log(LogLevel.DEBUG, "finish-step, abort for steering");
+              this.log(LogLevel.DEBUG, "stream, finish-step, abort for steering");
               this.abortController.abort(ABORT_REASON_STEER);
             }
             break;
