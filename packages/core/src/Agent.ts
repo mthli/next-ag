@@ -783,9 +783,15 @@ class Agent {
         }
       }
 
-      if (pendingPrompts.length === 0) {
-        pendingPrompts = this.dequeueFollowUpPrompts();
-        turnStartReason = TurnStartReason.FOLLOW_UP;
+      if (
+        this.currentStage !== AgentEventType.TURN_ERROR &&
+        this.currentStage !== AgentEventType.TURN_ABORT
+      ) {
+        // Dequeue follow-up prompts when no pending steering prompts.
+        if (pendingPrompts.length === 0) {
+          pendingPrompts = this.dequeueFollowUpPrompts();
+          turnStartReason = TurnStartReason.FOLLOW_UP;
+        }
       }
     }
 
