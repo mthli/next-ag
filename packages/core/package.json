@@ -2,8 +2,6 @@
   "name": "@next-ag/core",
   "version": "0.1.0",
   "description": "Agent runtime with tool calling and state management",
-  "type": "module",
-  "module": "src/index.ts",
   "author": "Matthew Lee",
   "license": "MIT",
   "repository": {
@@ -11,8 +9,27 @@
     "url": "https://github.com/mthli/next-ag.git",
     "directory": "packages/core"
   },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "default": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "./dist",
+    "./README.md"
+  ],
   "publishConfig": {
     "access": "public"
+  },
+  "scripts": {
+    "build": "bun build ./src/index.ts --outdir ./dist --format esm --packages=external && tsc",
+    "clean": "rimraf dist"
   },
   "dependencies": {
     "ai": "^6.0.97",
