@@ -390,7 +390,6 @@ class Agent {
   }
 
   private async loop(prompts: AgentPrompt[], recover: boolean) {
-    this.abortController = new AbortController();
     this.runningPromise = new Promise((resolve) => (this.runningResolver = resolve));
 
     this.emit({
@@ -746,7 +745,7 @@ class Agent {
 
           case "abort": {
             if (!turnMessage) {
-              throw new Error("abort, but turnMessage not exists");
+              throw new Error(`abort, but turnMessage not exists, reason=${part.reason}`);
             }
 
             if (part.reason === ABORT_REASON_STEER) {
@@ -818,6 +817,8 @@ class Agent {
       agentName: this.name,
       message: `run, prompt=${JSON.stringify(prompt)}`,
     });
+
+    this.abortController = new AbortController();
 
     let toolSet: ToolSet | undefined;
     if (this.tools && this.tools.length > 0) {
