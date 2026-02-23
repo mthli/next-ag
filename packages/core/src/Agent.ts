@@ -416,6 +416,7 @@ class Agent {
         break;
       }
 
+      const turnId = nanoid(10);
       const stream = await this.run({
         messages: this.context,
       });
@@ -434,6 +435,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               sessionId,
+              turnId,
               type: AgentEventType.TURN_START,
               message: undefined,
               startReason: turnStartReason,
@@ -474,6 +476,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               sessionId,
+              turnId,
               type: AgentEventType.REASONING_START,
               message: turnMessage,
             });
@@ -497,6 +500,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               sessionId,
+              turnId,
               type: AgentEventType.REASONING_UPDATE,
               message: turnMessage,
             });
@@ -512,6 +516,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               sessionId,
+              turnId,
               type: AgentEventType.REASONING_END,
               message: turnMessage,
             });
@@ -545,6 +550,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               sessionId,
+              turnId,
               type: AgentEventType.TEXT_START,
               message: turnMessage,
             });
@@ -567,6 +573,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               sessionId,
+              turnId,
               type: AgentEventType.TEXT_UPDATE,
               message: turnMessage,
             });
@@ -582,6 +589,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               sessionId,
+              turnId,
               type: AgentEventType.TEXT_END,
               message: turnMessage,
             });
@@ -617,6 +625,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               sessionId,
+              turnId,
               type: AgentEventType.TOOL_CALL,
               message: turnMessage,
             });
@@ -644,6 +653,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               sessionId,
+              turnId,
               type: AgentEventType.TOOL_RESULT,
               message,
             });
@@ -671,6 +681,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               sessionId,
+              turnId,
               type: AgentEventType.TOOL_ERROR,
               message,
             });
@@ -698,6 +709,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               sessionId,
+              turnId,
               type: AgentEventType.TURN_FINISH,
               message: turnMessage,
               finishReason: part.finishReason,
@@ -711,6 +723,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               sessionId,
+              turnId,
               type: AgentEventType.TURN_ERROR,
               message: turnMessage,
               error: part.error,
@@ -732,6 +745,7 @@ class Agent {
               this.emit({
                 agentId: this.id,
                 sessionId,
+                turnId,
                 type: AgentEventType.TURN_STEER,
                 message: turnMessage,
               });
@@ -742,6 +756,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               sessionId,
+              turnId,
               type: AgentEventType.TURN_ABORT,
               message: turnMessage,
               reason: part.reason,

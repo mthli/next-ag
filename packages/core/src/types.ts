@@ -170,7 +170,7 @@ export type BaseAgentEvent<T extends AgentEventType> = {
   sessionId: string;
   type: T;
   message: AgentEventMessageMap[T];
-};
+} & (T extends AgentEventType.SESSION_START | AgentEventType.SESSION_END ? {} : { turnId: string });
 
 export interface AgentEventMessageMap {
   [AgentEventType.SESSION_START]: undefined;

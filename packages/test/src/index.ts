@@ -25,7 +25,6 @@ const weather = createAgentTool({
 });
 
 const agent = new Agent({
-  id: "test",
   model: google("gemini-3-flash-preview"),
   providerOptions: {
     google: {
