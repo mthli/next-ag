@@ -10,6 +10,7 @@ import {
   type AssistantModelMessage,
   type ToolModelMessage,
   type ToolSet,
+  type FinishReason,
 } from "ai";
 import { nanoid } from "nanoid";
 import { serializeError } from "serialize-error";
@@ -62,6 +63,7 @@ class Agent {
 
   private currentStage?: AgentEventType;
   private pendingProps?: UpdateAgentProps;
+  private lastTurnFinishReason?: FinishReason;
 
   private abortController = new AbortController();
   private listeners = new Set<AgentEventListener>();
@@ -244,6 +246,22 @@ class Agent {
     // it's likely that agent is failed in the middle of user or tool message,
     // so we can just retry with current context.
     if (last?.role !== "assistant") {
+      this.logger?.debug({
+        agentId: this.id,
+        agentName: this.name,
+        message: "recovery, retry with current context",
+      });
+      this.loop([], true);
+      return true;
+    }
+
+    if (this.lastTurnFinishReason !== "stop") {
+      this.logger?.debug({
+        agentId: this.id,
+        agentName: this.name,
+        message: `recovery, re-generate last turn with current context`,
+      });
+      this.context.pop(); // remove last turn message.
       this.loop([], true);
       return true;
     }
@@ -385,6 +403,7 @@ class Agent {
         switch (part.type) {
           case "start": {
             turnMessage = undefined;
+            this.lastTurnFinishReason = undefined;
             this.emit({
               agentId: this.id,
               agentName: this.name,
@@ -648,6 +667,7 @@ class Agent {
               throw new Error("finish, but turnMessage not exists");
             }
 
+            this.lastTurnFinishReason = part.finishReason;
             this.emit({
               agentId: this.id,
               agentName: this.name,
