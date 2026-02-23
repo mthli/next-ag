@@ -38,11 +38,11 @@ const agent = new Agent({
   logger,
 });
 
-const unsubscribe = agent.subscribe((message) => {
-  const { agentId } = message;
+const unsubscribe = agent.subscribe((event) => {
+  const { agentId } = event;
   logger.info({
     agentId,
-    message: `subscribe, message=${JSON.stringify(message)}`,
+    message: `subscribe, event=${JSON.stringify(event)}`,
   });
 });
 
