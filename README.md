@@ -8,6 +8,14 @@ Based on [Vercel AI SDK](https://ai-sdk.dev/), inspired by the implementation of
 
 TODO
 
+## Development
+
+We use [Bun](https://bun.com/) as our package manager, run the command below and have fun 🍻
+
+```bash
+bun install
+```
+
 ## Motivation
 
 There are some reasons why Pi's author Mario Zechner doesn't build Pi on top of the Vercel AI SDK, [read this blog](https://mariozechner.at/posts/2025-11-30-pi-coding-agent/) if you're interested.
