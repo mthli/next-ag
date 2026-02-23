@@ -75,13 +75,17 @@ class Agent {
     return this._id;
   }
 
-  // Is agent running, i.e. in a session.
+  /**
+   * Is agent running, i.e. in a session.
+   */
   public get isRunning(): boolean {
     return Boolean(this.runningPromise);
   }
 
-  // Incremental update agent props.
-  // If agent is running, the update will be pending until next turn.
+  /**
+   * Incremental update agent props.
+   * If agent is running, the update will be pending until next turn.
+   */
   public updateProps(props: UpdateAgentProps) {
     const validStages = [
       undefined, // initial stage, no event emitted yet.
@@ -175,8 +179,10 @@ class Agent {
     this.pendingProps = undefined; // reset.
   }
 
-  // Start a new session with given prompt.
-  // Return false if agent is running, caller should waitForIdle() or abort() first.
+  /**
+   * Start a new session with given prompt.
+   * Return false if agent is running, caller should waitForIdle() or abort() first.
+   */
   public start(prompt: AgentPrompt): boolean {
     this.logger?.info({
       agentId: this.id,
@@ -198,8 +204,10 @@ class Agent {
     return true;
   }
 
-  // Try to recover after an error or an abort using current context and pending prompts.
-  // Return false if agent is running, or no context and no pending prompts to recover.
+  /**
+   * Try to recover after an error or an abort using current context and pending prompts.
+   * Return false if agent is running, or no context and no pending prompts to recover.
+   */
   public recover(): boolean {
     this.logger?.info({
       agentId: this.id,
@@ -277,8 +285,10 @@ class Agent {
     return false;
   }
 
-  // Steer current session with given prompt.
-  // Return false if agent is not running, caller should use start() instead.
+  /**
+   * Steer current session with given prompt.
+   * Return false if agent is not running, caller should use start() instead.
+   */
   public steer(prompt: AgentPrompt): boolean {
     this.logger?.info({
       agentId: this.id,
@@ -297,8 +307,10 @@ class Agent {
     return true;
   }
 
-  // Add follow-up prompt for next turn.
-  // Return false if agent is not running, caller should use start() instead.
+  /**
+   * Add follow-up prompt for next turn.
+   * Return false if agent is not running, caller should use start() instead.
+   */
   public followUp(prompt: AgentPrompt): boolean {
     this.logger?.info({
       agentId: this.id,
@@ -317,7 +329,9 @@ class Agent {
     return true;
   }
 
-  // Abort current session immediately.
+  /**
+   * Abort current session immediately.
+   */
   public abort(reason?: string) {
     if (reason === ABORT_REASON_STEER) {
       throw new Error(
@@ -336,8 +350,10 @@ class Agent {
     this.runningPromise = undefined;
   }
 
-  // Reset agent state, including context and pending prompts.
-  // Return false if agent is running, caller should waitForIdle() or abort() first.
+  /**
+   * Reset agent state, including context and pending prompts.
+   * Return false if agent is running, caller should waitForIdle() or abort() first.
+   */
   public reset(): boolean {
     this.logger?.info({
       agentId: this.id,
@@ -361,14 +377,18 @@ class Agent {
     return true;
   }
 
-  // Subscribe to agent events.
-  // Return an unsubscribe function.
+  /**
+   * Subscribe to agent events.
+   * Return an unsubscribe function.
+   */
   public subscribe(l: AgentEventListener): () => void {
     this.listeners.add(l);
     return () => this.listeners.delete(l);
   }
 
-  // Wait until current session is ended, including all turns and pending prompts.
+  /**
+   * Wait until current session is ended, including all turns and pending prompts.
+   */
   public waitForIdle(): Promise<void> {
     return this.runningPromise ?? Promise.resolve();
   }

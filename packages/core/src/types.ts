@@ -29,7 +29,9 @@ export interface Log {
 
 export type AgentMessage = UserModelMessage | AssistantModelMessage | ToolModelMessage;
 
-// You can either use `prompt` or `messages` but not both.
+/**
+ * You can either use `prompt` or `messages` but not both.
+ */
 // prettier-ignore
 export type AgentPrompt =
   | {
@@ -43,12 +45,16 @@ export type AgentPrompt =
 
 export type UpdateAgentProps = Omit<AgentProps, "id" | "name" | "model" | "logger">;
 export interface AgentProps {
-  // Unique identifier for the agent.
-  // If not provided, a random nanoid will be generated.
+  /**
+   * Unique identifier for the agent.
+   * If not provided, a random nanoid will be generated.
+   */
   id?: string;
 
-  // Language model that is used by the AI SDK.
-  // https://ai-sdk.dev/docs/getting-started/choosing-a-provider
+  /**
+   * Language model that is used by the AI SDK.
+   * https://ai-sdk.dev/docs/getting-started/choosing-a-provider
+   */
   model: LanguageModel;
 
   /**
@@ -89,13 +95,19 @@ export interface AgentProps {
    */
   topK?: number;
 
-  // Default is "fifo", which means the agent will only process one steering message per turn.
+  /**
+   * Default is "fifo", which means the agent will only process one steering message per turn.
+   */
   steeringMode?: SteeringMode;
 
-  // Default is "fifo", which means the agent will only process one follow-up message per turn.
+  /**
+   * Default is "fifo", which means the agent will only process one follow-up message per turn.
+   */
   followUpMode?: FollowUpMode;
 
-  // Optional logger to log agent events and messages.
+  /**
+   * Optional logger to log agent events and messages.
+   */
   logger?: Logger;
 }
 
@@ -103,10 +115,14 @@ export interface AgentTool<
   I extends z.ZodTypeAny = z.ZodTypeAny,
   O extends z.ZodTypeAny = z.ZodTypeAny,
 > {
-  // Unique name of the tool, used to call the tool by the language model.
+  /**
+   * Unique name of the tool, used to call the tool by the language model.
+   */
   name: string;
 
-  // Will be used by the language model to decide whether to use the tool.
+  /**
+   * Will be used by the language model to decide whether to use the tool.
+   */
   description: string;
 
   /**
@@ -124,7 +140,9 @@ export interface AgentTool<
   ) => AsyncIterable<z.infer<O>> | PromiseLike<z.infer<O>> | z.infer<O>;
 }
 
-// This is a helper function to create an AgentTool with proper typings.
+/**
+ * This is a helper function to create an AgentTool with proper typings.
+ */
 export const createAgentTool = <
   I extends z.ZodTypeAny = z.ZodTypeAny,
   O extends z.ZodTypeAny = z.ZodTypeAny,
@@ -133,13 +151,27 @@ export const createAgentTool = <
 ): AgentTool<I, O> => tool;
 
 export enum SteeringMode {
-  FIFO = "fifo", // one per turn (default).
-  ALL = "all", // send all steering messages at once.
+  /**
+   * One per turn (default).
+   */
+  FIFO = "fifo",
+
+  /**
+   * Send all steering messages at once.
+   */
+  ALL = "all",
 }
 
 export enum FollowUpMode {
-  FIFO = "fifo", // one per turn (default).
-  ALL = "all", // send all follow-up messages at once.
+  /**
+   * One per turn (default).
+   */
+  FIFO = "fifo",
+
+  /**
+   * Send all follow-up messages at once.
+   */
+  ALL = "all",
 }
 
 export enum AgentEventType {
