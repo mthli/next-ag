@@ -73,6 +73,13 @@ export interface AgentTool<
   ) => Promise<O extends z.ZodTypeAny ? z.infer<O> : unknown>;
 }
 
+export const defineAgentTool = <
+  I extends z.ZodTypeAny = z.ZodTypeAny,
+  O extends z.ZodTypeAny = z.ZodTypeAny,
+>(
+  tool: AgentTool<I, O>,
+): AgentTool<I, O> => tool;
+
 export enum SteeringMode {
   FIFO = "fifo", // default.
   ALL = "all",
