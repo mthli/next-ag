@@ -143,7 +143,7 @@ export type TurnStartEvent = BaseAgentEvent<AgentEventType.TURN_START> & {
 
 export enum TurnStartReason {
   START = "start",
-  RECOVERY = "recovery",
+  RECOVER = "recover",
   STEER = "steer",
   FOLLOW_UP = "follow-up",
 }

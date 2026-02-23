@@ -35,14 +35,6 @@ import {
 // Avoid outter code calling abort() with this reason.
 const ABORT_REASON_STEER = "__steer__";
 
-enum LogLevel {
-  TRACE = "trace",
-  DEBUG = "debug",
-  INFO = "info",
-  WARN = "warn",
-  ERROR = "error",
-}
-
 class Agent {
   private _id: string;
   private _name: string;
@@ -215,18 +207,18 @@ class Agent {
     return true;
   }
 
-  public recovery(): boolean {
+  public recover(): boolean {
     this.logger?.info({
       agentId: this.id,
       agentName: this.name,
-      message: "recovery",
+      message: "recover",
     });
 
     if (this.isRunning()) {
       this.logger?.warn({
         agentId: this.id,
         agentName: this.name,
-        message: "recovery, skipped, waitForIdle() or abort() first",
+        message: "recover, skipped, waitForIdle() or abort() first",
       });
       return false;
     }
@@ -235,7 +227,7 @@ class Agent {
       this.logger?.warn({
         agentId: this.id,
         agentName: this.name,
-        message: "recovery, skipped, no context to recover",
+        message: "recover, skipped, no context to recover",
       });
       return false;
     }
@@ -249,7 +241,7 @@ class Agent {
       this.logger?.debug({
         agentId: this.id,
         agentName: this.name,
-        message: "recovery, retry with current context",
+        message: "recover, retry with current context",
       });
       this.loop([], true);
       return true;
@@ -259,15 +251,42 @@ class Agent {
       this.logger?.debug({
         agentId: this.id,
         agentName: this.name,
-        message: `recovery, re-generate last turn with current context`,
+        message: `recover, re-generate last turn with current context`,
       });
       this.context.pop(); // remove last turn message.
       this.loop([], true);
       return true;
     }
 
-    // TODO (matthew)
-    return true;
+    let prompts = this.dequeueSteeringPrompts();
+    if (prompts.length > 0) {
+      this.logger?.debug({
+        agentId: this.id,
+        agentName: this.name,
+        message: "recover, recover with pending steering prompts",
+      });
+      this.loop(prompts, true);
+      return true;
+    }
+
+    prompts = this.dequeueFollowUpPrompts();
+    if (prompts.length > 0) {
+      this.logger?.debug({
+        agentId: this.id,
+        agentName: this.name,
+        message: "recover, recover with pending follow-up prompts",
+      });
+      this.loop(prompts, true);
+      return true;
+    }
+
+    this.logger?.warn({
+      agentId: this.id,
+      agentName: this.name,
+      message: "recover, no pending prompts to recover",
+    });
+
+    return false;
   }
 
   public steer(prompt: AgentPrompt): boolean {
@@ -366,7 +385,7 @@ class Agent {
     return this.runningPromise ?? Promise.resolve();
   }
 
-  private async loop(prompts: AgentPrompt[], recovery: boolean) {
+  private async loop(prompts: AgentPrompt[], recover: boolean) {
     this.abortController = new AbortController();
     this.runningPromise = new Promise((resolve) => (this.runningResolver = resolve));
 
@@ -379,12 +398,12 @@ class Agent {
 
     let pendingPrompts: AgentPrompt[] = [...prompts]; // copy.
     let turnMessage: AssistantModelMessage | undefined;
-    let turnStartReason = recovery ? TurnStartReason.RECOVERY : TurnStartReason.START;
-    let tryToRecovery = recovery;
+    let turnStartReason = recover ? TurnStartReason.RECOVER : TurnStartReason.START;
+    let tryToRecover = recover;
 
-    // Try to recovery once in the beginning of loop.
-    while (tryToRecovery || pendingPrompts.length > 0) {
-      tryToRecovery = false;
+    // Try to recover once in the beginning of loop.
+    while (tryToRecover || pendingPrompts.length > 0) {
+      tryToRecover = false;
 
       if (this.pendingProps) {
         this.updateProps(this.pendingProps);
@@ -832,7 +851,6 @@ class Agent {
     if (this.steeringMode === SteeringMode.FIFO) {
       const first = this.steeringPrompts.shift();
       return first ? [first] : [];
-      ``;
     } else {
       const promps = [...this.steeringPrompts];
       this.steeringPrompts = []; // clear.
