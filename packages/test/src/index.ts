@@ -48,8 +48,19 @@ const unsubscribe = agent.subscribe((message) => {
   });
 });
 
+// First execute.
 agent.start({
   prompt: "What is the weather in San Francisco?",
+});
+
+// Should be third execute.
+agent.followUp({
+  prompt: "What about the weather in Los Angeles?",
+});
+
+// Should be second execute.
+agent.steer({
+  prompt: "Actually, I want to know the weather in New York.",
 });
 
 await agent.waitForIdle();
