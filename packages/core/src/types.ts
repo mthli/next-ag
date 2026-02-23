@@ -59,8 +59,8 @@ export interface AgentProps {
 }
 
 export interface AgentTool<
-  I extends z.ZodTypeAny | undefined = undefined,
-  O extends z.ZodTypeAny | undefined = undefined,
+  I extends z.ZodTypeAny = z.ZodTypeAny,
+  O extends z.ZodTypeAny = z.ZodTypeAny,
 > {
   name: string;
   description: string;
