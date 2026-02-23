@@ -13,23 +13,23 @@ const p = pino({
 });
 
 const logger: Logger = {
-  trace: ({ agentName: name, message: msg }) => {
+  trace: ({ agentId: name, message: msg }) => {
     p.trace({ name, msg });
   },
 
-  debug: ({ agentName: name, message: msg }) => {
+  debug: ({ agentId: name, message: msg }) => {
     p.debug({ name, msg });
   },
 
-  info: ({ agentName: name, message: msg }) => {
+  info: ({ agentId: name, message: msg }) => {
     p.info({ name, msg });
   },
 
-  warn: ({ agentName: name, message: msg }) => {
+  warn: ({ agentId: name, message: msg }) => {
     p.warn({ name, msg });
   },
 
-  error: ({ agentName: name, message: msg, error }) => {
+  error: ({ agentId: name, message: msg, error }) => {
     p.error({ name, msg, error });
   },
 };

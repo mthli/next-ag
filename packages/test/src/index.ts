@@ -25,7 +25,7 @@ const weather = createAgentTool({
 });
 
 const agent = new Agent({
-  name: "test",
+  id: "test",
   model: google("gemini-3-flash-preview"),
   providerOptions: {
     google: {
@@ -40,10 +40,9 @@ const agent = new Agent({
 });
 
 const unsubscribe = agent.subscribe((message) => {
-  const { agentId, agentName } = message;
+  const { agentId } = message;
   logger.info({
     agentId,
-    agentName,
     message: `subscribe, message=${JSON.stringify(message)}`,
   });
 });

@@ -37,7 +37,6 @@ const ABORT_REASON_STEER = "__steer__";
 
 class Agent {
   private _id: string;
-  private _name: string;
   private model: LanguageModel;
   private providerOptions?: Record<string, JSONObject>;
   private systemPrompt?: string;
@@ -63,9 +62,8 @@ class Agent {
   private lastTurnFinishReason?: FinishReason;
 
   constructor(props: AgentProps) {
-    const { id, name, model, steeringMode, followUpMode, logger } = props;
+    const { id, model, steeringMode, followUpMode, logger } = props;
     this._id = id ?? nanoid(10);
-    this._name = name ?? "anonymous";
     this.model = model;
     this.steeringMode = steeringMode ?? SteeringMode.FIFO;
     this.followUpMode = followUpMode ?? FollowUpMode.FIFO;
@@ -75,10 +73,6 @@ class Agent {
 
   public get id(): string {
     return this._id;
-  }
-
-  public get name(): string {
-    return this._name;
   }
 
   public get isRunning(): boolean {
@@ -101,7 +95,6 @@ class Agent {
     if (this.isRunning && !validStages.includes(this.currentStage)) {
       this.logger?.info({
         agentId: this.id,
-        agentName: this.name,
         message: "updateProps, pending until next turn",
       });
 
@@ -118,7 +111,6 @@ class Agent {
       this.providerOptions = props.providerOptions ? { ...props.providerOptions } : undefined; // copy.
       this.logger?.info({
         agentId: this.id,
-        agentName: this.name,
         message: `updateProps, providerOptions=${JSON.stringify(this.providerOptions)}`,
       });
     }
@@ -127,7 +119,6 @@ class Agent {
       this.systemPrompt = props.systemPrompt;
       this.logger?.info({
         agentId: this.id,
-        agentName: this.name,
         message: `updateProps, systemPrompt=${this.systemPrompt}`,
       });
     }
@@ -136,7 +127,6 @@ class Agent {
       this.tools = props.tools ? [...props.tools] : undefined; // copy.
       this.logger?.info({
         agentId: this.id,
-        agentName: this.name,
         message: `updateProps, tools=${JSON.stringify(this.tools)}`,
       });
     }
@@ -145,7 +135,6 @@ class Agent {
       this.temperature = props.temperature;
       this.logger?.info({
         agentId: this.id,
-        agentName: this.name,
         message: `updateProps, temperature=${this.temperature}`,
       });
     }
@@ -154,7 +143,6 @@ class Agent {
       this.topP = props.topP;
       this.logger?.info({
         agentId: this.id,
-        agentName: this.name,
         message: `updateProps, topP=${this.topP}`,
       });
     }
@@ -163,7 +151,6 @@ class Agent {
       this.topK = props.topK;
       this.logger?.info({
         agentId: this.id,
-        agentName: this.name,
         message: `updateProps, topK=${this.topK}`,
       });
     }
@@ -172,7 +159,6 @@ class Agent {
       this.steeringMode = props.steeringMode;
       this.logger?.info({
         agentId: this.id,
-        agentName: this.name,
         message: `updateProps, steeringMode=${this.steeringMode}`,
       });
     }
@@ -181,7 +167,6 @@ class Agent {
       this.followUpMode = props.followUpMode;
       this.logger?.info({
         agentId: this.id,
-        agentName: this.name,
         message: `updateProps, followUpMode=${this.followUpMode}`,
       });
     }
@@ -194,14 +179,12 @@ class Agent {
   public start(prompt: AgentPrompt): boolean {
     this.logger?.info({
       agentId: this.id,
-      agentName: this.name,
       message: `start, prompt=${JSON.stringify(prompt)}`,
     });
 
     if (this.isRunning) {
       this.logger?.warn({
         agentId: this.id,
-        agentName: this.name,
         message: "start, skipped, waitForIdle() or abort() first",
       });
       return false;
@@ -219,14 +202,12 @@ class Agent {
   public recover(): boolean {
     this.logger?.info({
       agentId: this.id,
-      agentName: this.name,
       message: "recover",
     });
 
     if (this.isRunning) {
       this.logger?.warn({
         agentId: this.id,
-        agentName: this.name,
         message: "recover, skipped, waitForIdle() or abort() first",
       });
       return false;
@@ -235,7 +216,6 @@ class Agent {
     if (this.context.length === 0) {
       this.logger?.warn({
         agentId: this.id,
-        agentName: this.name,
         message: "recover, skipped, no context to recover",
       });
       return false;
@@ -249,7 +229,6 @@ class Agent {
     if (last?.role !== "assistant") {
       this.logger?.debug({
         agentId: this.id,
-        agentName: this.name,
         message: "recover, retry with current context",
       });
       this.loop([], true);
@@ -259,7 +238,6 @@ class Agent {
     if (this.lastTurnFinishReason !== "stop" && this.lastTurnFinishReason !== "tool-calls") {
       this.logger?.debug({
         agentId: this.id,
-        agentName: this.name,
         message: [
           `recover, lastTurnFinishReason=${this.lastTurnFinishReason},`,
           "re-generate last turn with current context",
@@ -274,7 +252,6 @@ class Agent {
     if (prompts.length > 0) {
       this.logger?.debug({
         agentId: this.id,
-        agentName: this.name,
         message: "recover, recover with pending steering prompts",
       });
       this.loop(prompts, true);
@@ -285,7 +262,6 @@ class Agent {
     if (prompts.length > 0) {
       this.logger?.debug({
         agentId: this.id,
-        agentName: this.name,
         message: "recover, recover with pending follow-up prompts",
       });
       this.loop(prompts, true);
@@ -294,7 +270,6 @@ class Agent {
 
     this.logger?.warn({
       agentId: this.id,
-      agentName: this.name,
       message: "recover, no pending prompts to recover",
     });
 
@@ -306,14 +281,12 @@ class Agent {
   public steer(prompt: AgentPrompt): boolean {
     this.logger?.info({
       agentId: this.id,
-      agentName: this.name,
       message: `steer, prompt=${JSON.stringify(prompt)}`,
     });
 
     if (!this.isRunning) {
       this.logger?.warn({
         agentId: this.id,
-        agentName: this.name,
         message: "steer, skipped, use start() instead",
       });
       return false;
@@ -328,14 +301,12 @@ class Agent {
   public followUp(prompt: AgentPrompt): boolean {
     this.logger?.info({
       agentId: this.id,
-      agentName: this.name,
       message: `followUp, prompt=${JSON.stringify(prompt)}`,
     });
 
     if (!this.isRunning) {
       this.logger?.warn({
         agentId: this.id,
-        agentName: this.name,
         message: "followUp, skipped, use start() instead",
       });
       return false;
@@ -355,7 +326,6 @@ class Agent {
 
     this.logger?.info({
       agentId: this.id,
-      agentName: this.name,
       message: `abort, reason=${reason}`,
     });
 
@@ -370,14 +340,12 @@ class Agent {
   public reset(): boolean {
     this.logger?.info({
       agentId: this.id,
-      agentName: this.name,
       message: "reset",
     });
 
     if (this.isRunning) {
       this.logger?.warn({
         agentId: this.id,
-        agentName: this.name,
         message: "reset, skipped, waitForIdle() or abort() first",
       });
       return false;
@@ -410,7 +378,6 @@ class Agent {
 
     this.emit({
       agentId: this.id,
-      agentName: this.name,
       sessionId,
       type: AgentEventType.SESSION_START,
       message: undefined,
@@ -444,7 +411,6 @@ class Agent {
       if (this.context.length === 0) {
         this.logger?.warn({
           agentId: this.id,
-          agentName: this.name,
           message: "loop, skipped, no context to run",
         });
         break;
@@ -458,7 +424,6 @@ class Agent {
       for await (const part of stream) {
         this.logger?.debug({
           agentId: this.id,
-          agentName: this.name,
           message: `stream, part=${JSON.stringify(part)}`,
         });
 
@@ -468,7 +433,6 @@ class Agent {
             this.lastTurnFinishReason = undefined;
             this.emit({
               agentId: this.id,
-              agentName: this.name,
               sessionId,
               type: AgentEventType.TURN_START,
               message: undefined,
@@ -494,7 +458,6 @@ class Agent {
               this.context.push(turnMessage);
               this.logger?.debug({
                 agentId: this.id,
-                agentName: this.name,
                 message: "stream, reasoning-start, new turnMessage",
               });
             }
@@ -510,7 +473,6 @@ class Agent {
 
             this.emit({
               agentId: this.id,
-              agentName: this.name,
               sessionId,
               type: AgentEventType.REASONING_START,
               message: turnMessage,
@@ -534,7 +496,6 @@ class Agent {
 
             this.emit({
               agentId: this.id,
-              agentName: this.name,
               sessionId,
               type: AgentEventType.REASONING_UPDATE,
               message: turnMessage,
@@ -550,7 +511,6 @@ class Agent {
 
             this.emit({
               agentId: this.id,
-              agentName: this.name,
               sessionId,
               type: AgentEventType.REASONING_END,
               message: turnMessage,
@@ -569,7 +529,6 @@ class Agent {
               this.context.push(turnMessage);
               this.logger?.debug({
                 agentId: this.id,
-                agentName: this.name,
                 message: "stream, text-start, new turnMessage",
               });
             }
@@ -585,7 +544,6 @@ class Agent {
 
             this.emit({
               agentId: this.id,
-              agentName: this.name,
               sessionId,
               type: AgentEventType.TEXT_START,
               message: turnMessage,
@@ -608,7 +566,6 @@ class Agent {
 
             this.emit({
               agentId: this.id,
-              agentName: this.name,
               sessionId,
               type: AgentEventType.TEXT_UPDATE,
               message: turnMessage,
@@ -624,7 +581,6 @@ class Agent {
 
             this.emit({
               agentId: this.id,
-              agentName: this.name,
               sessionId,
               type: AgentEventType.TEXT_END,
               message: turnMessage,
@@ -643,7 +599,6 @@ class Agent {
               this.context.push(turnMessage);
               this.logger?.debug({
                 agentId: this.id,
-                agentName: this.name,
                 message: "stream, tool-call, new turnMessage",
               });
             }
@@ -661,7 +616,6 @@ class Agent {
 
             this.emit({
               agentId: this.id,
-              agentName: this.name,
               sessionId,
               type: AgentEventType.TOOL_CALL,
               message: turnMessage,
@@ -689,7 +643,6 @@ class Agent {
             this.context.push(message);
             this.emit({
               agentId: this.id,
-              agentName: this.name,
               sessionId,
               type: AgentEventType.TOOL_RESULT,
               message,
@@ -717,7 +670,6 @@ class Agent {
             this.context.push(message);
             this.emit({
               agentId: this.id,
-              agentName: this.name,
               sessionId,
               type: AgentEventType.TOOL_ERROR,
               message,
@@ -730,7 +682,6 @@ class Agent {
             if (this.steeringPrompts.length > 0) {
               this.logger?.debug({
                 agentId: this.id,
-                agentName: this.name,
                 message: "stream, finish-step, abort for steering",
               });
               this.abortController.abort(ABORT_REASON_STEER);
@@ -746,7 +697,6 @@ class Agent {
             this.lastTurnFinishReason = part.finishReason;
             this.emit({
               agentId: this.id,
-              agentName: this.name,
               sessionId,
               type: AgentEventType.TURN_FINISH,
               message: turnMessage,
@@ -760,7 +710,6 @@ class Agent {
           case "error": {
             this.emit({
               agentId: this.id,
-              agentName: this.name,
               sessionId,
               type: AgentEventType.TURN_ERROR,
               message: turnMessage,
@@ -782,7 +731,6 @@ class Agent {
 
               this.emit({
                 agentId: this.id,
-                agentName: this.name,
                 sessionId,
                 type: AgentEventType.TURN_STEER,
                 message: turnMessage,
@@ -793,7 +741,6 @@ class Agent {
 
             this.emit({
               agentId: this.id,
-              agentName: this.name,
               sessionId,
               type: AgentEventType.TURN_ABORT,
               message: turnMessage,
@@ -813,7 +760,6 @@ class Agent {
           default: {
             this.logger?.warn({
               agentId: this.id,
-              agentName: this.name,
               message: `stream, unsupported part type=${part.type}`,
             });
             break;
@@ -829,7 +775,6 @@ class Agent {
 
     this.emit({
       agentId: this.id,
-      agentName: this.name,
       sessionId,
       type: AgentEventType.SESSION_END,
       message: undefined,
@@ -843,7 +788,6 @@ class Agent {
   private async run(prompt: AgentPrompt): Promise<AsyncIterableStream<TextStreamPart<ToolSet>>> {
     this.logger?.info({
       agentId: this.id,
-      agentName: this.name,
       message: `run, prompt=${JSON.stringify(prompt)}`,
     });
 

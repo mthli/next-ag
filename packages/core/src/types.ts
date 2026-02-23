@@ -23,7 +23,6 @@ export interface Logger {
 
 export interface Log {
   agentId: string;
-  agentName: string;
   message: string;
   error?: unknown;
 }
@@ -44,8 +43,12 @@ export type AgentPrompt =
 
 export type UpdateAgentProps = Omit<AgentProps, "id" | "name" | "model" | "logger">;
 export interface AgentProps {
+  // Unique identifier for the agent.
+  // If not provided, a random nanoid will be generated.
   id?: string;
-  name?: string;
+
+  // Language model that is used by the AI SDK.
+  // https://ai-sdk.dev/docs/getting-started/choosing-a-provider
   model: LanguageModel;
 
   /**
@@ -164,7 +167,6 @@ export enum AgentEventType {
 
 export type BaseAgentEvent<T extends AgentEventType> = {
   agentId: string;
-  agentName: string;
   sessionId: string;
   type: T;
   message: AgentEventMessageMap[T];
