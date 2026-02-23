@@ -510,7 +510,7 @@ class Agent {
             if (Array.isArray(turnMessage?.content)) {
               const index = turnMessage.content.findLastIndex((c) => c.type === "reasoning");
               if (index >= 0) {
-                // FIXME (matthew) ai sdk is not export ReasoningPart, so we use any.
+                // FIXME (matthew) AI SDK is not export ReasoningPart, so we use any.
                 (turnMessage.content[index] as /* ReasoningPart */ any).text += part.text;
               } else {
                 throw new Error("reasoning-delta, but no reasoning found in content");

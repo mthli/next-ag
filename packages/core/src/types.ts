@@ -9,7 +9,7 @@ import type {
 } from "ai";
 import { z } from "zod";
 
-// Copy from ai sdk since it doesn't export these types but we need them.
+// Copy from AI SDK since it doesn't export these types but we need them.
 export type JSONObject = { [key: string]: JSONValue | undefined };
 export type JSONArray = JSONValue[];
 
@@ -47,14 +47,52 @@ export interface AgentProps {
   id?: string;
   name?: string;
   model: LanguageModel;
+
+  /**
+   * Additional provider-specific options.
+   *
+   * They are passed through to the provider from the AI SDK and
+   * enable provider-specific functionality that can be fully encapsulated in the provider.
+   */
   providerOptions?: Record<string, JSONObject>;
+
   systemPrompt?: string;
   tools?: AgentTool[];
+
+  /**
+   * Temperature setting.
+   * The range depends on the provider and model.
+   *
+   * It is recommended to set either `temperature` or `topP`, but not both.
+   */
   temperature?: number;
+
+  /**
+   * Nucleus sampling.
+   * This is a number between 0 and 1.
+   *
+   * E.g. 0.1 would mean that only tokens with the top 10% probability mass are considered.
+   *
+   * It is recommended to set either `temperature` or `topP`, but not both.
+   */
   topP?: number;
+
+  /**
+   * Only sample from the top K options for each subsequent token.
+   * Used to remove "long tail" low probability responses.
+   *
+   * Recommended for advanced use cases only.
+   * You usually only need to use `temperature`.
+   */
   topK?: number;
+
+  // Default is "fifo", which means the agent will only process one steering message per turn.
   steeringMode?: SteeringMode;
+
+  // Default is "fifo", which means the agent will only process one follow-up message per turn.
   followUpMode?: FollowUpMode;
+
+  // Optional logger to log agent events and messages.
   logger?: Logger;
 }
 
@@ -62,9 +100,19 @@ export interface AgentTool<
   I extends z.ZodTypeAny = z.ZodTypeAny,
   O extends z.ZodTypeAny = z.ZodTypeAny,
 > {
+  // Unique name of the tool, used to call the tool by the language model.
   name: string;
+
+  // Will be used by the language model to decide whether to use the tool.
   description: string;
+
+  /**
+   * Strict mode setting for the tool.
+   * Providers that support strict mode will use this setting to determine how the input should be generated.
+   * Strict mode will always produce valid inputs, but it might limit what input schemas are supported.
+   */
   strict?: boolean;
+
   inputSchema?: I;
   outputSchema?: O;
   execute: (
@@ -73,6 +121,7 @@ export interface AgentTool<
   ) => AsyncIterable<z.infer<O>> | PromiseLike<z.infer<O>> | z.infer<O>;
 }
 
+// This is a helper function to create an AgentTool with proper typings.
 export const createAgentTool = <
   I extends z.ZodTypeAny = z.ZodTypeAny,
   O extends z.ZodTypeAny = z.ZodTypeAny,
@@ -81,13 +130,13 @@ export const createAgentTool = <
 ): AgentTool<I, O> => tool;
 
 export enum SteeringMode {
-  FIFO = "fifo", // default.
-  ALL = "all",
+  FIFO = "fifo", // one per turn (default).
+  ALL = "all", // send all steering messages at once.
 }
 
 export enum FollowUpMode {
-  FIFO = "fifo", // default.
-  ALL = "all",
+  FIFO = "fifo", // one per turn (default).
+  ALL = "all", // send all follow-up messages at once.
 }
 
 export enum AgentEventType {
