@@ -4,9 +4,12 @@ Next Tiny AI Agents Framework 🪩
 
 Based on [Vercel AI SDK](https://ai-sdk.dev/), inspired by the implementation of [pi-agent-core](https://github.com/badlogic/pi-mono/tree/main/packages/agent).
 
-## Package
+## Packages
 
-TODO
+| Package                                                                         | Description                                          |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **[@next-ag/core](https://github.com/mthli/next-ag/tree/master/packages/core)** | Agent runtime with tool calling and state management |
+| ...                                                                             | To be continue...                                    |
 
 ## Development
 
