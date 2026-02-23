@@ -247,11 +247,14 @@ class Agent {
       return true;
     }
 
-    if (this.lastTurnFinishReason !== "stop") {
+    if (this.lastTurnFinishReason !== "stop" && this.lastTurnFinishReason !== "tool-calls") {
       this.logger?.debug({
         agentId: this.id,
         agentName: this.name,
-        message: `recover, re-generate last turn with current context`,
+        message: [
+          `recover, lastTurnFinishReason=${this.lastTurnFinishReason},`,
+          "re-generate last turn with current context",
+        ].join(" "),
       });
       this.context.pop(); // remove last turn message.
       this.loop([], true);
@@ -331,8 +334,9 @@ class Agent {
 
   public abort(reason?: string) {
     if (reason === ABORT_REASON_STEER) {
-      // prettier-ignore
-      throw new Error(`abort reason can't be "${ABORT_REASON_STEER}", which is reserved for steer()`);
+      throw new Error(
+        `abort reason can't be "${ABORT_REASON_STEER}", which is reserved for steer()`,
+      );
     }
 
     this.logger?.info({

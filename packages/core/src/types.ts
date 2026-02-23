@@ -68,9 +68,9 @@ export interface AgentTool<
   inputSchema?: I;
   outputSchema?: O;
   execute: (
-    input: I extends z.ZodTypeAny ? z.infer<I> : unknown,
+    input: z.infer<I>,
     abortSignal: AbortSignal,
-  ) => Promise<O extends z.ZodTypeAny ? z.infer<O> : unknown>;
+  ) => AsyncIterable<z.infer<O>> | PromiseLike<z.infer<O>> | z.infer<O>;
 }
 
 export const defineAgentTool = <
