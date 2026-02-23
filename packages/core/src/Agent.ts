@@ -238,8 +238,17 @@ class Agent {
       return false;
     }
 
-    // TODO (matthew)
+    const last = this.context.at(-1);
 
+    // If last message is not from assistant,
+    // it's likely that agent is failed in the middle of user or tool message,
+    // so we can just retry with current context.
+    if (last?.role !== "assistant") {
+      this.loop([], true);
+      return true;
+    }
+
+    // TODO (matthew)
     return true;
   }
 
