@@ -4,12 +4,6 @@ import type { Logger } from "@next-ag/core";
 
 const p = pino({
   level: "trace",
-  transport: {
-    target: "pino-pretty",
-    options: {
-      colorize: true,
-    },
-  },
 });
 
 const logger: Logger = {

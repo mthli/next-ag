@@ -24,12 +24,15 @@ const weather = createAgentTool({
   }),
 });
 
+// FIXME (matthew) fallback to gemini-2.5-flash because this issue:
+// BUG V6: Gemini 3 flash throw error when calling function tool (see desc for details)
+// https://github.com/vercel/ai/issues/11413
 const agent = new Agent({
-  model: google("gemini-3-flash-preview"),
+  model: google("gemini-2.5-flash"),
   providerOptions: {
     google: {
       thinkingConfig: {
-        thinkingLevel: "high",
+        // thinkingLevel: "high",
         includeThoughts: true,
       },
     } satisfies GoogleLanguageModelOptions,

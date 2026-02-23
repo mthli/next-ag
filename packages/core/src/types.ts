@@ -238,6 +238,7 @@ export enum TurnStartReason {
   RECOVER = "recover",
   STEER = "steer",
   FOLLOW_UP = "follow-up",
+  TOOL_CALLS = "tool-calls",
 }
 
 export type TurnFinishEvent = BaseAgentEvent<AgentEventType.TURN_FINISH> & {

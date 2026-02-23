@@ -233,9 +233,13 @@ class Agent {
     const last = this.context.at(-1);
 
     // If last message is not from assistant,
-    // it's likely that agent is failed in the middle of user or tool message,
-    // so we can just retry with current context.
-    if (last?.role !== "assistant") {
+    // that means agent is failed in the middle of user or tool message.
+    //
+    // If last message is from assistant but last turn is finished by tool-calls,
+    // that means we haven't send tool result back to model.
+    //
+    // So we can just retry with current context.
+    if (last?.role !== "assistant" || this.lastTurnFinishReason === "tool-calls") {
       this.logger?.debug({
         agentId: this.id,
         message: "recover, retry with current context",
@@ -244,7 +248,7 @@ class Agent {
       return true;
     }
 
-    if (this.lastTurnFinishReason !== "stop" && this.lastTurnFinishReason !== "tool-calls") {
+    if (this.lastTurnFinishReason !== "stop") {
       this.logger?.debug({
         agentId: this.id,
         message: [
@@ -406,10 +410,10 @@ class Agent {
 
     let pendingPrompts: AgentPrompt[] = [...prompts]; // copy.
     let turnStartReason = recover ? TurnStartReason.RECOVER : TurnStartReason.START;
+    let forceToNextTurn = recover;
 
-    // Try to recover once in the beginning of loop.
-    while (recover || pendingPrompts.length > 0) {
-      recover = false;
+    while (forceToNextTurn || pendingPrompts.length > 0) {
+      forceToNextTurn = false; // consumed.
 
       if (this.pendingProps) {
         this.updateProps(this.pendingProps);
@@ -760,8 +764,8 @@ class Agent {
                 throw new Error("abort for steering, but no pending steering prompts");
               }
 
-              pendingPrompts = this.dequeueSteeringPrompts();
               turnStartReason = TurnStartReason.STEER;
+              pendingPrompts = this.dequeueSteeringPrompts();
 
               this.emit({
                 agentId: this.id,
@@ -803,14 +807,23 @@ class Agent {
         }
       }
 
+      // Send tool result back to model in next turn.
+      if (this.currentStage === AgentEventType.TURN_FINISH) {
+        if (this.lastTurnFinishReason === "tool-calls") {
+          turnStartReason = TurnStartReason.TOOL_CALLS;
+          forceToNextTurn = true;
+          continue;
+        }
+      }
+
+      // Dequeue follow-up prompts when no pending steering prompts.
       if (
         this.currentStage !== AgentEventType.TURN_ERROR &&
         this.currentStage !== AgentEventType.TURN_ABORT
       ) {
-        // Dequeue follow-up prompts when no pending steering prompts.
         if (pendingPrompts.length === 0) {
-          pendingPrompts = this.dequeueFollowUpPrompts();
           turnStartReason = TurnStartReason.FOLLOW_UP;
+          pendingPrompts = this.dequeueFollowUpPrompts();
         }
       }
     }

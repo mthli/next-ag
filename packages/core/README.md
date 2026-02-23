@@ -104,7 +104,8 @@ subscribe((event) => { ... })
 │
 ├─ session-start
 │
-├─ turn-start, triggered by start(), recover(), steer(), or followUp()
+├─ turn-start, triggered by start(), recover(), steer(), followUp(),
+│              or auto send tool result back to model.
 │
 ├─ reasoning-start,  assistant starts reasoning.  (optional)
 ├─ reasoning-update, assistant updates reasoning. (optional)
@@ -118,7 +119,7 @@ subscribe((event) => { ... })
 ├─ tool-result, tool has result.                  (optional)
 ├─ tool-error,  tool has error.                   (optional)
 │
-├─ turn-finish, turn ends normally, will enter next turn if has followUp()
+├─ turn-finish, turn ends normally, will enter next turn if has followUp() or tool result.
 ├─ turn-error,  turn ends with error, and can be recover()
 ├─ turn-abort,  turn ends with abort(), and can be recover()
 ├─ turn-steer,  turn ends with steer(), will enter next turn.
