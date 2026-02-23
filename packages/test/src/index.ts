@@ -1,6 +1,6 @@
 import { createGoogleGenerativeAI, type GoogleLanguageModelOptions } from "@ai-sdk/google";
 
-import Agent from "@next-ag/core";
+import { Agent } from "@next-ag/core";
 import logger from "./logger";
 
 const google = createGoogleGenerativeAI({
