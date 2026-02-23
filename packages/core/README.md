@@ -104,7 +104,7 @@ subscribe((event) => { ... })
 │
 ├─ session-start
 │
-├─ turn-start
+├─ turn-start, triggered by start(), recover(), steer(), or followUp()
 │
 ├─ reasoning-start,  assistant starts reasoning.  (optional)
 ├─ reasoning-update, assistant updates reasoning. (optional)
