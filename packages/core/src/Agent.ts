@@ -73,12 +73,16 @@ class Agent {
     this.updateProps(props);
   }
 
-  public get id() {
+  public get id(): string {
     return this._id;
   }
 
-  public get name() {
+  public get name(): string {
     return this._name;
+  }
+
+  public get isRunning(): boolean {
+    return Boolean(this.runningPromise);
   }
 
   // Incremental update agent props.
@@ -94,7 +98,7 @@ class Agent {
       AgentEventType.TURN_STEER,
     ];
 
-    if (this.isRunning() && !validStages.includes(this.currentStage)) {
+    if (this.isRunning && !validStages.includes(this.currentStage)) {
       this.logger?.info({
         agentId: this.id,
         agentName: this.name,
@@ -194,7 +198,7 @@ class Agent {
       message: `start, prompt=${JSON.stringify(prompt)}`,
     });
 
-    if (this.isRunning()) {
+    if (this.isRunning) {
       this.logger?.warn({
         agentId: this.id,
         agentName: this.name,
@@ -219,7 +223,7 @@ class Agent {
       message: "recover",
     });
 
-    if (this.isRunning()) {
+    if (this.isRunning) {
       this.logger?.warn({
         agentId: this.id,
         agentName: this.name,
@@ -306,7 +310,7 @@ class Agent {
       message: `steer, prompt=${JSON.stringify(prompt)}`,
     });
 
-    if (!this.isRunning()) {
+    if (!this.isRunning) {
       this.logger?.warn({
         agentId: this.id,
         agentName: this.name,
@@ -328,7 +332,7 @@ class Agent {
       message: `followUp, prompt=${JSON.stringify(prompt)}`,
     });
 
-    if (!this.isRunning()) {
+    if (!this.isRunning) {
       this.logger?.warn({
         agentId: this.id,
         agentName: this.name,
@@ -370,7 +374,7 @@ class Agent {
       message: "reset",
     });
 
-    if (this.isRunning()) {
+    if (this.isRunning) {
       this.logger?.warn({
         agentId: this.id,
         agentName: this.name,
@@ -393,10 +397,6 @@ class Agent {
   public subscribe(l: AgentEventListener): () => void {
     this.listeners.add(l);
     return () => this.listeners.delete(l);
-  }
-
-  public isRunning(): boolean {
-    return Boolean(this.runningPromise);
   }
 
   // Wait until current session is finished, including all turns and pending prompts.
