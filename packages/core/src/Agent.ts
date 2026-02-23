@@ -61,14 +61,14 @@ class Agent {
   private followUpPrompts: AgentPrompt[] = [];
   private context: AgentMessage[] = [];
 
-  private currentStage?: AgentEventType;
-  private pendingProps?: UpdateAgentProps;
-  private lastTurnFinishReason?: FinishReason;
-
   private abortController = new AbortController();
   private listeners = new Set<AgentEventListener>();
   private runningPromise?: Promise<void>;
   private runningResolver?: () => void;
+
+  private currentStage?: AgentEventType;
+  private pendingProps?: UpdateAgentProps;
+  private lastTurnFinishReason?: FinishReason;
 
   constructor(props: AgentProps) {
     const { id, name, model, steeringMode, followUpMode, logger } = props;
@@ -326,6 +326,31 @@ class Agent {
     this.runningResolver?.();
     this.runningResolver = undefined;
     this.runningPromise = undefined;
+  }
+
+  public reset(): boolean {
+    this.logger?.info({
+      agentId: this.id,
+      agentName: this.name,
+      message: "reset",
+    });
+
+    if (this.isRunning()) {
+      this.logger?.warn({
+        agentId: this.id,
+        agentName: this.name,
+        message: "reset, skipped, waitForIdle() or abort() first",
+      });
+      return false;
+    }
+
+    this.currentStage = undefined;
+    this.lastTurnFinishReason = undefined;
+    this.steeringPrompts = [];
+    this.followUpPrompts = [];
+    this.context = [];
+
+    return true;
   }
 
   public subscribe(l: AgentEventListener): () => void {
