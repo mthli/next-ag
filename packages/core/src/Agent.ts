@@ -75,6 +75,7 @@ class Agent {
     return this._id;
   }
 
+  // Is agent running, i.e. in a session.
   public get isRunning(): boolean {
     return Boolean(this.runningPromise);
   }
@@ -198,7 +199,7 @@ class Agent {
   }
 
   // Try to recover after an error or an abort using current context and pending prompts.
-  // Return false if agent is running, or no context to recover.
+  // Return false if agent is running, or no context and no pending prompts to recover.
   public recover(): boolean {
     this.logger?.info({
       agentId: this.id,

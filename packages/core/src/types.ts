@@ -168,9 +168,10 @@ export enum AgentEventType {
 export type BaseAgentEvent<T extends AgentEventType> = {
   agentId: string;
   sessionId: string;
+  turnId?: string;
   type: T;
   message: AgentEventMessageMap[T];
-} & (T extends AgentEventType.SESSION_START | AgentEventType.SESSION_END ? {} : { turnId: string });
+};
 
 export interface AgentEventMessageMap {
   [AgentEventType.SESSION_START]: undefined;
