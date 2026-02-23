@@ -659,7 +659,10 @@ class Agent {
                   type: "tool-result",
                   toolCallId: part.toolCallId,
                   toolName: part.toolName,
-                  output: part.output,
+                  output: {
+                    type: "json", // FIXME (matthew) should support "content"?
+                    value: part.output,
+                  },
                 } as ToolResultPart,
               ],
             } as ToolModelMessage;
