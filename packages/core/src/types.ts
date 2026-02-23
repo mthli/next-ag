@@ -126,8 +126,8 @@ export interface AgentEventMessageMap {
 
   [AgentEventType.TURN_START]: undefined;
   [AgentEventType.TURN_FINISH]: AssistantModelMessage;
-  [AgentEventType.TURN_ERROR]: AssistantModelMessage;
-  [AgentEventType.TURN_ABORT]: AssistantModelMessage;
+  [AgentEventType.TURN_ERROR]: AssistantModelMessage | undefined;
+  [AgentEventType.TURN_ABORT]: AssistantModelMessage | undefined;
   [AgentEventType.TURN_STEER]: AssistantModelMessage;
 
   [AgentEventType.REASONING_START]: AssistantModelMessage;

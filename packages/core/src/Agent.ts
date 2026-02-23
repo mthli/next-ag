@@ -733,10 +733,6 @@ class Agent {
           }
 
           case "error": {
-            if (!turnMessage) {
-              throw new Error("error, but turnMessage not exists");
-            }
-
             this.emit({
               agentId: this.id,
               agentName: this.name,
@@ -744,17 +740,14 @@ class Agent {
               message: turnMessage,
               error: part.error,
             });
-
             break;
           }
 
           case "abort": {
-            if (!turnMessage) {
-              throw new Error(`abort, but turnMessage not exists, reason=${part.reason}`);
-            }
-
             if (part.reason === ABORT_REASON_STEER) {
-              if (this.steeringPrompts.length === 0) {
+              if (!turnMessage) {
+                throw new Error("abort for steering, but turnMessage not exists");
+              } else if (this.steeringPrompts.length === 0) {
                 throw new Error("abort for steering, but no pending steering prompts");
               }
 
