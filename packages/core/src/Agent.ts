@@ -73,7 +73,7 @@ class Agent {
     this._id = id ?? nanoid(10);
     this._name = name ?? "anonymous";
     this.model = model;
-    this.steeringMode = steeringMode ?? SteeringMode.ALL;
+    this.steeringMode = steeringMode ?? SteeringMode.FIFO;
     this.followUpMode = followUpMode ?? FollowUpMode.FIFO;
     this.logger = logger;
     this.updateProps(props);

@@ -74,8 +74,8 @@ export interface AgentTool<
 }
 
 export enum SteeringMode {
-  FIFO = "fifo",
-  ALL = "all", // default.
+  FIFO = "fifo", // default.
+  ALL = "all",
 }
 
 export enum FollowUpMode {
