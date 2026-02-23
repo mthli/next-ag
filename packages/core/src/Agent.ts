@@ -415,13 +415,11 @@ class Agent {
     });
 
     let pendingPrompts: AgentPrompt[] = [...prompts]; // copy.
-    let turnMessage: AssistantModelMessage | undefined;
     let turnStartReason = recover ? TurnStartReason.RECOVER : TurnStartReason.START;
-    let tryToRecover = recover;
 
     // Try to recover once in the beginning of loop.
-    while (tryToRecover || pendingPrompts.length > 0) {
-      tryToRecover = false;
+    while (recover || pendingPrompts.length > 0) {
+      recover = false;
 
       if (this.pendingProps) {
         this.updateProps(this.pendingProps);
@@ -454,6 +452,7 @@ class Agent {
         messages: this.context,
       });
 
+      let turnMessage: AssistantModelMessage | undefined;
       for await (const part of stream) {
         this.logger?.debug({
           agentId: this.id,
@@ -465,20 +464,15 @@ class Agent {
         switch (part.type) {
           case "start": {
             this.lastTurnFinishReason = undefined;
-            turnMessage = undefined;
-
-            const prompts = [...pendingPrompts]; // copy.
-            pendingPrompts = []; // clear.
-
             this.emit({
               agentId: this.id,
               agentName: this.name,
               type: AgentEventType.TURN_START,
               message: undefined,
               startReason: turnStartReason,
-              prompts,
+              prompts: [...pendingPrompts], // copy.
             });
-
+            pendingPrompts = []; // clear.
             break;
           }
 
