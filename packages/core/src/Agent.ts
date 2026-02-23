@@ -368,7 +368,7 @@ class Agent {
     return () => this.listeners.delete(l);
   }
 
-  // Wait until current session is finished, including all turns and pending prompts.
+  // Wait until current session is ended, including all turns and pending prompts.
   public waitForIdle(): Promise<void> {
     return this.runningPromise ?? Promise.resolve();
   }

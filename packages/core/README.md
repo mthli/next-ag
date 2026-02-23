@@ -1,6 +1,6 @@
 # @next-ag/core
 
-Next Tiny AI Agents Framework 🪩
+Agent runtime with tool calling and state management.
 
 Based on [Vercel AI SDK](https://ai-sdk.dev/), inspired by the implementation of [pi-agent-core](https://github.com/badlogic/pi-mono/tree/main/packages/agent).
 
@@ -86,7 +86,7 @@ agent.followUp({
 // Reset agent state, including context and pending prompts.
 // agent.reset();
 
-// Wait until current session is finished.
+// Wait until current session is ended.
 await agent.waitForIdle();
 
 // Unsubscribe agent events.
@@ -95,9 +95,36 @@ unsubscribe();
 
 Fully example can be found in [packages/test/src/index.ts](https://github.com/mthli/next-ag/blob/master/packages/test/src/index.ts)
 
-## Core Concepts
+## Event Flow
 
-TODO
+Understanding the event flow helps build responsive interfaces.
+
+```text
+subscribe((event) => { ... })
+│
+├─ session-start
+│
+├─ turn-start
+│
+├─ reasoning-start,  assistant starts reasoning.  (optional)
+├─ reasoning-update, assistant updates reasoning. (optional)
+├─ reasoning-end,    assistant ends reasoning.    (optional)
+│
+├─ text-start,  assistant starts answering.       (optional)
+├─ text-update, assistant updates answer.         (optional)
+├─ text-end,    assistant ends answering.         (optional)
+│
+├─ tool-call,   assistant calls a tool.           (optional)
+├─ tool-result, tool has result.                  (optional)
+├─ tool-error,  tool has error.                   (optional)
+│
+├─ turn-finish, turn ends normally, will enter next turn if has followUp()
+├─ turn-error,  turn ends with error, and can be recover()
+├─ turn-abort,  turn ends with abort(), and can be recover()
+├─ turn-steer,  turn ends with steer(), will enter next turn.
+│
+└─ session-end
+```
 
 ## License
 

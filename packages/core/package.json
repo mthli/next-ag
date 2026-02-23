@@ -1,7 +1,7 @@
 {
   "name": "@next-ag/core",
   "version": "0.1.0",
-  "description": "Next Tiny AI Agents Framework 🪩",
+  "description": "Agent runtime with tool calling and state management",
   "type": "module",
   "module": "src/index.ts",
   "author": "Matthew Lee",
