@@ -53,6 +53,9 @@ const agent = new Agent({
   // ...props
 });
 
+// Incremental update agent props.
+// agent.updateProps({ ... });
+
 // Subscribe to agent events.
 // https://github.com/mthli/next-ag/blob/master/packages/core/src/types.ts
 const unsubscribe = agent.subscribe((event) => {
@@ -74,7 +77,19 @@ agent.followUp({
   prompt: "What about the weather in Los Angeles?",
 });
 
+// Abort current session immediately.
+// agent.abort();
+//
+// Try to recover after an error or an abort using current context and pending prompts.
+// agent.recover();
+//
+// Reset agent state, including context and pending prompts.
+// agent.reset();
+
+// Wait until current session is finished.
 await agent.waitForIdle();
+
+// Unsubscribe agent events.
 unsubscribe();
 ```
 
