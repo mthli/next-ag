@@ -1,14 +1,14 @@
 import { createGoogleGenerativeAI, type GoogleLanguageModelOptions } from "@ai-sdk/google";
 import { z } from "zod";
 
-import { Agent, defineAgentTool } from "@next-ag/core";
+import { Agent, createAgentTool } from "@next-ag/core";
 import logger from "./logger";
 
 const google = createGoogleGenerativeAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-const weather = defineAgentTool({
+const weather = createAgentTool({
   name: "weather",
   description: "Get the weather in a location.",
   inputSchema: z.object({

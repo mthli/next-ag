@@ -73,7 +73,7 @@ export interface AgentTool<
   ) => AsyncIterable<z.infer<O>> | PromiseLike<z.infer<O>> | z.infer<O>;
 }
 
-export const defineAgentTool = <
+export const createAgentTool = <
   I extends z.ZodTypeAny = z.ZodTypeAny,
   O extends z.ZodTypeAny = z.ZodTypeAny,
 >(
