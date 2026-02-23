@@ -328,8 +328,12 @@ class Agent {
     let pendingPrompts: AgentPrompt[] = [...prompts]; // copy.
     let turnMessage: AssistantModelMessage | undefined;
     let turnStartReason = recovery ? TurnStartReason.RECOVERY : TurnStartReason.START;
+    let tryToRecovery = recovery;
 
-    while (pendingPrompts.length > 0) {
+    // Try to recovery once in the beginning of loop.
+    while (tryToRecovery || pendingPrompts.length > 0) {
+      tryToRecovery = false;
+
       if (this.pendingProps) {
         this.updateProps(this.pendingProps);
         this.pendingProps = undefined;
@@ -346,6 +350,15 @@ class Agent {
             content: pending.prompt, // string.
           } as UserModelMessage);
         }
+      }
+
+      if (this.context.length === 0) {
+        this.logger?.warn({
+          agentId: this.id,
+          agentName: this.name,
+          message: "loop, skipped, no context to run",
+        });
+        break;
       }
 
       const stream = await this.run({
