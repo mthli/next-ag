@@ -140,8 +140,8 @@ export enum FollowUpMode {
 }
 
 export enum AgentEventType {
-  AGENT_START = "agent-start",
-  AGENT_END = "agent-end",
+  SESSION_START = "session-start",
+  SESSION_END = "session-end",
 
   TURN_START = "turn-start",
   TURN_FINISH = "turn-finish",
@@ -165,13 +165,14 @@ export enum AgentEventType {
 export type BaseAgentEvent<T extends AgentEventType> = {
   agentId: string;
   agentName: string;
+  sessionId: string;
   type: T;
   message: AgentEventMessageMap[T];
 };
 
 export interface AgentEventMessageMap {
-  [AgentEventType.AGENT_START]: undefined;
-  [AgentEventType.AGENT_END]: undefined;
+  [AgentEventType.SESSION_START]: undefined;
+  [AgentEventType.SESSION_END]: undefined;
 
   [AgentEventType.TURN_START]: undefined;
   [AgentEventType.TURN_FINISH]: AssistantModelMessage;

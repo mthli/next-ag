@@ -90,8 +90,8 @@ class Agent {
   public updateProps(props: UpdateAgentProps) {
     const validStages = [
       undefined, // initial stage, no event emitted yet.
-      AgentEventType.AGENT_START,
-      AgentEventType.AGENT_END,
+      AgentEventType.SESSION_START,
+      AgentEventType.SESSION_END,
       AgentEventType.TURN_FINISH,
       AgentEventType.TURN_ERROR,
       AgentEventType.TURN_ABORT,
@@ -406,11 +406,13 @@ class Agent {
 
   private async loop(prompts: AgentPrompt[], recover: boolean) {
     this.runningPromise = new Promise((resolve) => (this.runningResolver = resolve));
+    const sessionId = nanoid(10);
 
     this.emit({
       agentId: this.id,
       agentName: this.name,
-      type: AgentEventType.AGENT_START,
+      sessionId,
+      type: AgentEventType.SESSION_START,
       message: undefined,
     });
 
@@ -467,6 +469,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               agentName: this.name,
+              sessionId,
               type: AgentEventType.TURN_START,
               message: undefined,
               startReason: turnStartReason,
@@ -508,6 +511,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               agentName: this.name,
+              sessionId,
               type: AgentEventType.REASONING_START,
               message: turnMessage,
             });
@@ -531,6 +535,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               agentName: this.name,
+              sessionId,
               type: AgentEventType.REASONING_UPDATE,
               message: turnMessage,
             });
@@ -546,6 +551,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               agentName: this.name,
+              sessionId,
               type: AgentEventType.REASONING_END,
               message: turnMessage,
             });
@@ -580,6 +586,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               agentName: this.name,
+              sessionId,
               type: AgentEventType.TEXT_START,
               message: turnMessage,
             });
@@ -602,6 +609,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               agentName: this.name,
+              sessionId,
               type: AgentEventType.TEXT_UPDATE,
               message: turnMessage,
             });
@@ -617,6 +625,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               agentName: this.name,
+              sessionId,
               type: AgentEventType.TEXT_END,
               message: turnMessage,
             });
@@ -653,6 +662,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               agentName: this.name,
+              sessionId,
               type: AgentEventType.TOOL_CALL,
               message: turnMessage,
             });
@@ -680,6 +690,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               agentName: this.name,
+              sessionId,
               type: AgentEventType.TOOL_RESULT,
               message,
             });
@@ -707,6 +718,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               agentName: this.name,
+              sessionId,
               type: AgentEventType.TOOL_ERROR,
               message,
             });
@@ -735,6 +747,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               agentName: this.name,
+              sessionId,
               type: AgentEventType.TURN_FINISH,
               message: turnMessage,
               finishReason: part.finishReason,
@@ -748,6 +761,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               agentName: this.name,
+              sessionId,
               type: AgentEventType.TURN_ERROR,
               message: turnMessage,
               error: part.error,
@@ -769,6 +783,7 @@ class Agent {
               this.emit({
                 agentId: this.id,
                 agentName: this.name,
+                sessionId,
                 type: AgentEventType.TURN_STEER,
                 message: turnMessage,
               });
@@ -779,6 +794,7 @@ class Agent {
             this.emit({
               agentId: this.id,
               agentName: this.name,
+              sessionId,
               type: AgentEventType.TURN_ABORT,
               message: turnMessage,
               reason: part.reason,
@@ -814,7 +830,8 @@ class Agent {
     this.emit({
       agentId: this.id,
       agentName: this.name,
-      type: AgentEventType.AGENT_END,
+      sessionId,
+      type: AgentEventType.SESSION_END,
       message: undefined,
     });
 
