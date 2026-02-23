@@ -449,16 +449,21 @@ class Agent {
         // https://ai-sdk.dev/docs/ai-sdk-core/generating-text#fullstream-property
         switch (part.type) {
           case "start": {
-            turnMessage = undefined;
             this.lastTurnFinishReason = undefined;
+            turnMessage = undefined;
+
+            const prompts = [...pendingPrompts]; // copy.
+            pendingPrompts = []; // clear.
+
             this.emit({
               agentId: this.id,
               agentName: this.name,
               type: AgentEventType.TURN_START,
               message: undefined,
               startReason: turnStartReason,
-              prompts: [...pendingPrompts], // copy.
+              prompts,
             });
+
             break;
           }
 
@@ -795,8 +800,10 @@ class Agent {
         }
       }
 
-      pendingPrompts = this.dequeueFollowUpPrompts();
-      turnStartReason = TurnStartReason.FOLLOW_UP;
+      if (pendingPrompts.length === 0) {
+        pendingPrompts = this.dequeueFollowUpPrompts();
+        turnStartReason = TurnStartReason.FOLLOW_UP;
+      }
     }
 
     this.emit({
