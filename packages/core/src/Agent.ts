@@ -789,29 +789,6 @@ class Agent {
     this.runningPromise = undefined;
   }
 
-  private dequeueSteeringPrompts(): AgentPrompt[] {
-    if (this.steeringMode === SteeringMode.FIFO) {
-      const first = this.steeringPrompts.shift();
-      return first ? [first] : [];
-      ``;
-    } else {
-      const promps = [...this.steeringPrompts];
-      this.steeringPrompts = []; // clear.
-      return promps;
-    }
-  }
-
-  private dequeueFollowUpPrompts(): AgentPrompt[] {
-    if (this.followUpMode === FollowUpMode.FIFO) {
-      const first = this.followUpPrompts.shift();
-      return first ? [first] : [];
-    } else {
-      const prompts = [...this.followUpPrompts];
-      this.followUpPrompts = []; // clear.
-      return prompts;
-    }
-  }
-
   private async run(prompt: AgentPrompt): Promise<AsyncIterableStream<TextStreamPart<ToolSet>>> {
     this.logger?.info({
       agentId: this.id,
@@ -849,6 +826,29 @@ class Agent {
     });
 
     return result.fullStream;
+  }
+
+  private dequeueSteeringPrompts(): AgentPrompt[] {
+    if (this.steeringMode === SteeringMode.FIFO) {
+      const first = this.steeringPrompts.shift();
+      return first ? [first] : [];
+      ``;
+    } else {
+      const promps = [...this.steeringPrompts];
+      this.steeringPrompts = []; // clear.
+      return promps;
+    }
+  }
+
+  private dequeueFollowUpPrompts(): AgentPrompt[] {
+    if (this.followUpMode === FollowUpMode.FIFO) {
+      const first = this.followUpPrompts.shift();
+      return first ? [first] : [];
+    } else {
+      const prompts = [...this.followUpPrompts];
+      this.followUpPrompts = []; // clear.
+      return prompts;
+    }
   }
 
   private emit(e: AgentEvent) {
