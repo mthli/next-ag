@@ -1,4 +1,7 @@
+import path from "path";
+
 import { defineConfig } from "wxt";
+import tailwindcss from "@tailwindcss/vite";
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
@@ -12,5 +15,13 @@ export default defineConfig({
         32: "icon/32.png",
       },
     },
+    vite: () => ({
+      plugins: [tailwindcss()],
+      resolve: {
+        alias: {
+          "@": path.resolve(__dirname, "./entrypoints"),
+        },
+      },
+    }),
   },
 });
