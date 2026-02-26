@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 import "@/styles/options.css";
 
@@ -10,6 +11,7 @@ ReactDOM.createRoot(root as HTMLElement).render(
   <React.StrictMode>
     <ThemeProvider>
       <div />
+      <Toaster richColors position="top-center" />
     </ThemeProvider>
   </React.StrictMode>,
 );
