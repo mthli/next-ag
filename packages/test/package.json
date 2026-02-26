@@ -4,8 +4,8 @@
   "type": "module",
   "module": "src/index.ts",
   "dependencies": {
-    "@next-ag/core": "workspace:*",
     "@ai-sdk/google": "^3.0.30",
+    "@next-ag/core": "workspace:*",
     "pino": "^10.3.1",
     "zod": "^4.3.6"
   }
