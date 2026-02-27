@@ -4,7 +4,7 @@ import ReactDOM from "react-dom/client";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
-import "@/styles/options.css";
+import "@/styles/globals.css";
 
 const root = document.getElementById("root");
 ReactDOM.createRoot(root as HTMLElement).render(
